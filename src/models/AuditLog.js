@@ -56,7 +56,7 @@ const AuditLog = sequelize.define(
     },
 
     ip_address: {
-      type: DataTypes.STRING(45), // soporta IPv6
+      type: DataTypes.STRING(45),
       allowNull: true,
       validate: {
         len: [0, 45],
@@ -71,8 +71,7 @@ const AuditLog = sequelize.define(
   {
     tableName: 'audit_logs',
     timestamps: true,
-    underscored: true, // created_at / updated_at (IMPORTANTE para tu index de created_at)
-
+    underscored: true,
     indexes: [
       { name: 'idx_audit_action', fields: ['action'] },
       { name: 'idx_audit_user_id', fields: ['user_id'] },

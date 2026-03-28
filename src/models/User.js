@@ -5,49 +5,79 @@ const bcrypt = require('bcryptjs');
 const User = sequelize.define(
   'User',
   {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
 
-    nombre: { type: DataTypes.STRING(100), allowNull: false },
-    apellido: { type: DataTypes.STRING(100), allowNull: false },
+    hotel_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
+    nombre: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+      },
+    },
+
+    apellido: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+      },
+    },
 
     email: {
       type: DataTypes.STRING(100),
       allowNull: false,
       unique: true,
-      validate: { isEmail: true },
+      validate: {
+        isEmail: true,
+      },
     },
 
-    password: { type: DataTypes.STRING, allowNull: false },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
 
     rol: {
-      type: DataTypes.ENUM('admin', 'empleado'),
+      type: DataTypes.ENUM('admin', 'recepcion', 'supervisor', 'empleado'),
       allowNull: false,
       defaultValue: 'empleado',
     },
 
-    esta_activo: {
-      type: DataTypes.BOOLEAN,
+    estado: {
+      type: DataTypes.ENUM('activo', 'inactivo'),
       allowNull: false,
-      defaultValue: true,
+      defaultValue: 'activo',
     },
 
-    ultimo_login: { type: DataTypes.DATE, allowNull: true },
+    ultimo_login: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
-    tableName: 'users', // ⚠️ cambia a 'usuarios' si tu tabla se llama así
+    tableName: 'users',
     timestamps: true,
     underscored: true,
     hooks: {
-      beforeCreate: async (u) => {
-        if (u.password) {
+      beforeCreate: async (user) => {
+        if (user.password) {
           const salt = await bcrypt.genSalt(10);
-          u.password = await bcrypt.hash(u.password, salt);
+          user.password = await bcrypt.hash(user.password, salt);
         }
       },
-      beforeUpdate: async (u) => {
-        if (u.changed('password')) {
+      beforeUpdate: async (user) => {
+        if (user.changed('password')) {
           const salt = await bcrypt.genSalt(10);
-          u.password = await bcrypt.hash(u.password, salt);
+          user.password = await bcrypt.hash(user.password, salt);
         }
       },
     },
@@ -55,7 +85,9 @@ const User = sequelize.define(
       attributes: { exclude: ['password'] },
     },
     scopes: {
-      withPassword: { attributes: {} },
+      withPassword: {
+        attributes: {},
+      },
     },
   }
 );

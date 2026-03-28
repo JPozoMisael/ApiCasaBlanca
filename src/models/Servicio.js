@@ -20,6 +20,7 @@ const Servicio = sequelize.define(
       allowNull: false,
       validate: {
         notEmpty: true,
+        len: [2, 100],
       },
     },
 
@@ -40,13 +41,12 @@ const Servicio = sequelize.define(
       type: DataTypes.ENUM('habitacion', 'reserva', 'general'),
       allowNull: false,
       defaultValue: 'reserva',
-      comment: 'Define si el servicio aplica a habitación, reserva o general',
     },
 
-    esta_activo: {
-      type: DataTypes.BOOLEAN,
+    estado: {
+      type: DataTypes.ENUM('activo', 'inactivo'),
       allowNull: false,
-      defaultValue: true,
+      defaultValue: 'activo',
     },
   },
   {
@@ -59,8 +59,8 @@ const Servicio = sequelize.define(
         fields: ['hotel_id'],
       },
       {
-        name: 'idx_servicio_activo',
-        fields: ['esta_activo'],
+        name: 'idx_servicio_estado',
+        fields: ['estado'],
       },
       {
         name: 'uq_servicio_hotel_nombre',

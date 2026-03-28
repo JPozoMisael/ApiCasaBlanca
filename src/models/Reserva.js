@@ -4,23 +4,92 @@ const { sequelize } = require('../config/db');
 const Reserva = sequelize.define(
   'Reserva',
   {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
 
-    cliente_id: { type: DataTypes.INTEGER, allowNull: false },
-    hotel_id: { type: DataTypes.INTEGER, allowNull: false },
+    cliente_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
 
-    fecha_entrada: { type: DataTypes.DATEONLY, allowNull: false },
-    fecha_salida: { type: DataTypes.DATEONLY, allowNull: false },
+    hotel_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
 
-    num_huespedes: { type: DataTypes.INTEGER, allowNull: false },
+    codigo_reserva: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [4, 20],
+      },
+    },
+
+    fecha_entrada: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+    },
+
+    fecha_salida: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+      validate: {
+        isAfterFechaEntrada(value) {
+          if (this.fecha_entrada && value <= this.fecha_entrada) {
+            throw new Error('La fecha de salida debe ser mayor a la fecha de entrada');
+          }
+        },
+      },
+    },
+
+    num_huespedes: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      validate: {
+        min: 1,
+      },
+    },
 
     estado: {
-      type: DataTypes.ENUM('pendiente', 'confirmada', 'cancelada', 'completada'),
+      type: DataTypes.ENUM(
+        'pendiente',
+        'confirmada',
+        'check_in',
+        'check_out',
+        'cancelada',
+        'no_show'
+      ),
+      allowNull: false,
       defaultValue: 'pendiente',
     },
 
-    precio_total: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-    metodo_pago: { type: DataTypes.STRING(50) },
+    subtotal: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+    },
+
+    impuestos: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+    },
+
+    precio_total: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+    },
+
+    observaciones: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: 'reservas',

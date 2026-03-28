@@ -1,48 +1,49 @@
-// src/app.js
 const express = require('express');
 const cors = require('cors');
 
-const routes = require('./routes'); // ✅ routes/index.js
+const routes = require('./routes');
 const notFound = require('./middleware/notFound.middleware');
 const errorHandler = require('./middleware/error.middleware');
 const { limiterBasico } = require('./middleware/rateLimit.middleware');
 
 const app = express();
 
-/**
- * =========================================================
- * Configuración básica (producción)
- * =========================================================
- */
+/*
+|--------------------------------------------------------------------------
+| Configuracion base
+|--------------------------------------------------------------------------
+*/
 
-// 1) JSON con límite (evita payloads enormes)
+// Limite para JSON
 app.use(express.json({ limit: process.env.JSON_LIMIT || '1mb' }));
 
-// 2) CORS controlado por entorno
-// En .env puedes definir:
+// CORS controlado por variable de entorno
+// Ejemplo:
 // CORS_ORIGINS=http://localhost:8100,https://tudominio.com
 const rawOrigins = process.env.CORS_ORIGINS || '*';
+
 const allowedOrigins =
   rawOrigins === '*'
     ? '*'
     : rawOrigins
         .split(',')
-        .map((o) => o.trim())
+        .map((origin) => origin.trim())
         .filter(Boolean);
 
 app.use(
   cors({
-    origin: (origin, cb) => {
-      // Permitir requests sin Origin (Postman, apps móviles, server-to-server)
-      if (!origin) return cb(null, true);
+    origin: (origin, callback) => {
+      // Permitir requests sin Origin:
+      // Postman, aplicaciones moviles o llamadas servidor a servidor
+      if (!origin) return callback(null, true);
 
-      // Si se dejó '*' (modo abierto)
-      if (allowedOrigins === '*') return cb(null, true);
+      // Permitir todos los origenes si se definio "*"
+      if (allowedOrigins === '*') return callback(null, true);
 
-      // Validar contra lista
-      if (allowedOrigins.includes(origin)) return cb(null, true);
+      // Validar origen permitido
+      if (allowedOrigins.includes(origin)) return callback(null, true);
 
-      return cb(new Error('CORS: Origen no permitido'), false);
+      return callback(new Error('CORS: Origen no permitido'), false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -50,18 +51,18 @@ app.use(
   })
 );
 
-// 3) Rate limit global (básico)
+// Rate limit global
 app.use(limiterBasico);
 
-/**
- * =========================================================
- * Rutas
- * =========================================================
- */
+/*
+|--------------------------------------------------------------------------
+| Rutas base
+|--------------------------------------------------------------------------
+*/
 
-// Healthcheck (mejor que /)
+// Healthcheck para monitoreo
 app.get('/health', (req, res) => {
-  res.status(200).json({
+  return res.status(200).json({
     ok: true,
     service: 'API Casa Blanca',
     env: process.env.NODE_ENV || 'development',
@@ -69,22 +70,26 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Ruta simple (opcional)
+// Ruta raiz
 app.get('/', (req, res) => {
-  res.json({ ok: true, message: 'API Casa Blanca funcionando ✅', health: '/health' });
+  return res.status(200).json({
+    ok: true,
+    message: 'API Casa Blanca funcionando',
+    health: '/health',
+  });
 });
 
-// Versionado API
+// Prefijo versionado de API
 const API_PREFIX = '/api/v1';
 
-// ✅ Monta todas las rutas (auth, admin, hoteles, habitaciones, reservas, pagos, etc.)
+// Rutas principales
 app.use(API_PREFIX, routes);
 
-/**
- * =========================================================
- * 404 + Error Handler Global
- * =========================================================
- */
+/*
+|--------------------------------------------------------------------------
+| Manejo global de errores
+|--------------------------------------------------------------------------
+*/
 app.use(notFound);
 app.use(errorHandler);
 

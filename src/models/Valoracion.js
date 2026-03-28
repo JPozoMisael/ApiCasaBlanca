@@ -4,17 +4,30 @@ const { sequelize } = require('../config/db');
 const Valoracion = sequelize.define(
   'Valoracion',
   {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
 
-    reserva_id: { type: DataTypes.INTEGER, allowNull: false },
+    reserva_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
 
     puntuacion: {
       type: DataTypes.TINYINT,
       allowNull: false,
-      validate: { min: 1, max: 10 },
+      validate: {
+        min: 1,
+        max: 10,
+      },
     },
 
-    comentario: { type: DataTypes.TEXT, allowNull: true },
+    comentario: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
 
     fecha: {
       type: DataTypes.DATE,
@@ -26,7 +39,13 @@ const Valoracion = sequelize.define(
     tableName: 'valoraciones',
     timestamps: true,
     underscored: true,
-    indexes: [{ name: 'idx_valoracion_reserva', fields: ['reserva_id'] }],
+    indexes: [
+      {
+        name: 'uq_valoracion_reserva',
+        unique: true,
+        fields: ['reserva_id'],
+      },
+    ],
   }
 );
 
