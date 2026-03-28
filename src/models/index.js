@@ -39,11 +39,6 @@ let associationsApplied = false;
 function applyAssociations() {
   if (associationsApplied) return;
 
-  /*
-  |--------------------------------------------------------------------------
-  | Hotel
-  |--------------------------------------------------------------------------
-  */
   Hotel.hasMany(TipoHabitacion, {
     foreignKey: 'hotel_id',
     as: 'tiposHabitacion',
@@ -107,11 +102,6 @@ function applyAssociations() {
     as: 'hotel',
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | TipoHabitacion
-  |--------------------------------------------------------------------------
-  */
   TipoHabitacion.hasMany(Habitacion, {
     foreignKey: 'tipo_habitacion_id',
     as: 'habitaciones',
@@ -130,11 +120,6 @@ function applyAssociations() {
     as: 'tipoHabitacion',
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Cliente
-  |--------------------------------------------------------------------------
-  */
   Cliente.hasMany(Reserva, {
     foreignKey: 'cliente_id',
     as: 'reservas',
@@ -144,11 +129,6 @@ function applyAssociations() {
     as: 'cliente',
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Reserva
-  |--------------------------------------------------------------------------
-  */
   Reserva.hasMany(Pago, {
     foreignKey: 'reserva_id',
     as: 'pagos',
@@ -185,11 +165,6 @@ function applyAssociations() {
     as: 'reserva',
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Habitacion
-  |--------------------------------------------------------------------------
-  */
   Habitacion.hasMany(DetalleReserva, {
     foreignKey: 'habitacion_id',
     as: 'detallesReserva',
@@ -208,11 +183,6 @@ function applyAssociations() {
     as: 'habitacion',
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Temporada
-  |--------------------------------------------------------------------------
-  */
   Temporada.hasMany(TarifaHabitacion, {
     foreignKey: 'temporada_id',
     as: 'tarifasHabitacion',
@@ -222,11 +192,6 @@ function applyAssociations() {
     as: 'temporada',
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Servicio
-  |--------------------------------------------------------------------------
-  */
   Servicio.hasMany(ServicioReserva, {
     foreignKey: 'servicio_id',
     as: 'reservasServicio',
@@ -236,11 +201,6 @@ function applyAssociations() {
     as: 'servicio',
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | User / AuditLog
-  |--------------------------------------------------------------------------
-  */
   User.hasMany(AuditLog, {
     foreignKey: 'user_id',
     as: 'logsAuditoria',

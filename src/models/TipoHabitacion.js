@@ -85,6 +85,17 @@ const TipoHabitacion = sequelize.define(
     tableName: 'tipos_habitacion',
     timestamps: true,
     underscored: true,
+    indexes: [
+      {
+        name: 'idx_tipo_habitacion_hotel',
+        fields: ['hotel_id'],
+      },
+      {
+        name: 'uq_tipo_habitacion_hotel_nombre',
+        unique: true,
+        fields: ['hotel_id', 'nombre'],
+      },
+    ],
   }
 );
 
