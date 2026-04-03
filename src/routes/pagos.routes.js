@@ -5,13 +5,23 @@ const controller = require('../controllers/pagos.controller');
 const auth = require('../middleware/auth.middleware');
 const roles = require('../middleware/roles.middleware');
 const validate = require('../middleware/validate.middleware');
-const { crearPagoSchema, confirmarPagoSchema } = require('../validators/pagos.schema');
+const { crearPagoSchema } = require('../validators/pagos.schema');
 
 router.get('/', auth, roles('admin', 'empleado'), controller.listarPorReserva);
 
-router.post('/', auth, roles('admin', 'empleado'), validate(crearPagoSchema), controller.crear);
+router.post(
+  '/',
+  auth,
+  roles('admin', 'empleado'),
+  validate(crearPagoSchema),
+  controller.crear
+);
 
-// extra recomendado: pago + confirmar reserva
-router.post('/confirmar', auth, roles('admin', 'empleado'), validate(confirmarPagoSchema), controller.crearYConfirmar);
+router.post(
+  '/confirmar',
+  auth,
+  roles('admin', 'empleado'),
+  controller.crearYConfirmar
+);
 
 module.exports = router;

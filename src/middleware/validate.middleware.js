@@ -11,7 +11,10 @@ module.exports = (schema) => {
       return res.status(422).json({
         ok: false,
         message: 'Validación fallida',
-        details: error.details.map((d) => d.message),
+        details: error.details.map((d) => ({
+          campo: d.path.join('.'),
+          mensaje: d.message,
+        })),
       });
     }
 

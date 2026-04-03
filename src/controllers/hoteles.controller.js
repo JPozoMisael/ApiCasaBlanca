@@ -1,125 +1,127 @@
-// src/controllers/servicios.controller.js
-const serviciosService = require('../services/servicios.service');
+const hotelesService = require('../services/hoteles.service');
 
-/**
- * GET /api/v1/servicios
- * Filtros opcionales:
- *  ?hotel_id
- *  ?esta_activo=true|false
- */
 async function listar(req, res, next) {
   try {
-    const filtros = {
-      hotel_id: req.query.hotel_id,
-      esta_activo:
-        typeof req.query.esta_activo === 'undefined'
-          ? undefined
-          : String(req.query.esta_activo).toLowerCase() === 'true',
-    };
-
-    const servicios = await serviciosService.listarServicios(filtros);
+    const hoteles = await hotelesService.listarHoteles();
 
     res.status(200).json({
       ok: true,
-      data: servicios,
+      data: hoteles,
+      meta: { total: hoteles.length },
     });
+
   } catch (error) {
+    console.error('Error listar hoteles:', error.message);
     next(error);
   }
 }
 
-/**
- * GET /api/v1/servicios/:id
- */
 async function obtenerPorId(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
 
-    const servicio = await serviciosService.obtenerServicioPorId(id);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
-    if (!servicio) {
+    const hotel = await hotelesService.obtenerHotelPorId(id);
+
+    if (!hotel) {
       return res.status(404).json({
         ok: false,
-        message: 'Servicio no encontrado',
+        message: 'Hotel no encontrado',
       });
     }
 
     res.status(200).json({
       ok: true,
-      data: servicio,
+      data: hotel,
     });
+
   } catch (error) {
+    console.error('Error obtener hotel:', error.message);
     next(error);
   }
 }
 
-/**
- * POST /api/v1/servicios
- * Protegido en routes (admin)
- */
 async function crear(req, res, next) {
   try {
-    const servicio = await serviciosService.crearServicio(req.body);
+    const hotel = await hotelesService.crearHotel(req.body);
 
     res.status(201).json({
       ok: true,
-      message: 'Servicio creado correctamente',
-      data: servicio,
+      message: 'Hotel creado correctamente',
+      data: hotel,
     });
+
   } catch (error) {
+    console.error('Error crear hotel:', error.message);
     next(error);
   }
 }
 
-/**
- * PUT /api/v1/servicios/:id
- * Protegido en routes (admin)
- */
 async function actualizar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
 
-    const servicio = await serviciosService.actualizarServicio(id, req.body);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
-    if (!servicio) {
+    const hotel = await hotelesService.actualizarHotel(id, req.body);
+
+    if (!hotel) {
       return res.status(404).json({
         ok: false,
-        message: 'Servicio no encontrado',
+        message: 'Hotel no encontrado',
       });
     }
 
     res.status(200).json({
       ok: true,
-      message: 'Servicio actualizado correctamente',
-      data: servicio,
+      message: 'Hotel actualizado correctamente',
+      data: hotel,
     });
+
   } catch (error) {
+    console.error('Error actualizar hotel:', error.message);
     next(error);
   }
 }
 
-/**
- * DELETE /api/v1/servicios/:id
- * Protegido en routes (admin)
- */
 async function eliminar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
 
-    const okDelete = await serviciosService.eliminarServicio(id);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
+
+    const okDelete = await hotelesService.eliminarHotel(id);
 
     if (!okDelete) {
       return res.status(404).json({
         ok: false,
-        message: 'Servicio no encontrado',
+        message: 'Hotel no encontrado',
       });
     }
 
     res.status(200).json({
       ok: true,
-      message: 'Servicio eliminado correctamente',
+      message: 'Hotel eliminado correctamente',
     });
+
   } catch (error) {
+    console.error('Error eliminar hotel:', error.message);
     next(error);
   }
 }

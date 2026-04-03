@@ -11,7 +11,9 @@ async function dashboard(req, res, next) {
       ok: true,
       data,
     });
+
   } catch (error) {
+    console.error('Error dashboard:', error.message);
     next(error);
   }
 }
@@ -26,8 +28,11 @@ async function listarUsuarios(req, res, next) {
     res.status(200).json({
       ok: true,
       data: usuarios,
+      meta: { total: usuarios.length },
     });
+
   } catch (error) {
+    console.error('Error listar usuarios:', error.message);
     next(error);
   }
 }
@@ -44,7 +49,9 @@ async function crearUsuario(req, res, next) {
       message: 'Usuario creado correctamente',
       data: usuario,
     });
+
   } catch (error) {
+    console.error('Error crear usuario:', error.message);
     next(error);
   }
 }
@@ -54,8 +61,24 @@ async function crearUsuario(req, res, next) {
  */
 async function cambiarRol(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
     const { rol } = req.body;
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
+
+    const rolesValidos = ['admin', 'empleado', 'cliente'];
+
+    if (!rol || !rolesValidos.includes(rol)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Rol inválido',
+      });
+    }
 
     const usuario = await adminService.cambiarRol(id, rol);
 
@@ -71,7 +94,9 @@ async function cambiarRol(req, res, next) {
       message: 'Rol actualizado correctamente',
       data: usuario,
     });
+
   } catch (error) {
+    console.error('Error cambiar rol:', error.message);
     next(error);
   }
 }

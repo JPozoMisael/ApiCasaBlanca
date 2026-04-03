@@ -1,16 +1,9 @@
-// src/controllers/servicios.controller.js
 const serviciosService = require('../services/servicios.service');
 
-/**
- * GET /api/v1/servicios
- * Filtros opcionales:
- *  ?hotel_id
- *  ?esta_activo=true|false
- */
 async function listar(req, res, next) {
   try {
     const filtros = {
-      hotel_id: req.query.hotel_id,
+      hotel_id: req.query.hotel_id ? Number(req.query.hotel_id) : undefined,
       esta_activo:
         typeof req.query.esta_activo === 'undefined'
           ? undefined
@@ -22,18 +15,25 @@ async function listar(req, res, next) {
     res.status(200).json({
       ok: true,
       data: servicios,
+      meta: { total: servicios.length },
     });
+
   } catch (error) {
+    console.error('Error listar servicios:', error.message);
     next(error);
   }
 }
 
-/**
- * GET /api/v1/servicios/:id
- */
 async function obtenerPorId(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
     const servicio = await serviciosService.obtenerServicioPorId(id);
 
@@ -48,15 +48,13 @@ async function obtenerPorId(req, res, next) {
       ok: true,
       data: servicio,
     });
+
   } catch (error) {
+    console.error('Error obtener servicio:', error.message);
     next(error);
   }
 }
 
-/**
- * POST /api/v1/servicios
- * Protegido en routes (admin)
- */
 async function crear(req, res, next) {
   try {
     const servicio = await serviciosService.crearServicio(req.body);
@@ -66,18 +64,23 @@ async function crear(req, res, next) {
       message: 'Servicio creado correctamente',
       data: servicio,
     });
+
   } catch (error) {
+    console.error('Error crear servicio:', error.message);
     next(error);
   }
 }
 
-/**
- * PUT /api/v1/servicios/:id
- * Protegido en routes (admin)
- */
 async function actualizar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
     const servicio = await serviciosService.actualizarServicio(id, req.body);
 
@@ -93,18 +96,23 @@ async function actualizar(req, res, next) {
       message: 'Servicio actualizado correctamente',
       data: servicio,
     });
+
   } catch (error) {
+    console.error('Error actualizar servicio:', error.message);
     next(error);
   }
 }
 
-/**
- * DELETE /api/v1/servicios/:id
- * Protegido en routes (admin)
- */
 async function eliminar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
     const okDelete = await serviciosService.eliminarServicio(id);
 
@@ -119,7 +127,9 @@ async function eliminar(req, res, next) {
       ok: true,
       message: 'Servicio eliminado correctamente',
     });
+
   } catch (error) {
+    console.error('Error eliminar servicio:', error.message);
     next(error);
   }
 }

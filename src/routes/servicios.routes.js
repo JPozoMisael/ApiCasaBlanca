@@ -7,9 +7,11 @@ const roles = require('../middleware/roles.middleware');
 const validate = require('../middleware/validate.middleware');
 const { crearServicioSchema, actualizarServicioSchema } = require('../validators/servicios.schema');
 
+// Público
 router.get('/', controller.listar);
 router.get('/:id', controller.obtenerPorId);
 
+// Protegido
 router.post('/', auth, roles('admin'), validate(crearServicioSchema), controller.crear);
 router.put('/:id', auth, roles('admin'), validate(actualizarServicioSchema), controller.actualizar);
 router.delete('/:id', auth, roles('admin'), controller.eliminar);

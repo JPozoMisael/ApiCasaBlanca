@@ -31,7 +31,18 @@ const crearReservaSchema = Joi.object({
     metodo: Joi.string().valid('tarjeta', 'efectivo', 'transferencia', 'paypal').required(),
     monto: Joi.number().positive().required(),
   }).allow(null),
-});
+})
+.custom((value, helpers) => {
+  const entrada = new Date(value.fecha_entrada);
+  const salida = new Date(value.fecha_salida);
+
+  if (salida <= entrada) {
+    return helpers.message('fecha_salida debe ser mayor que fecha_entrada');
+  }
+
+  return value;
+})
+.unknown(false);
 
 const actualizarReservaSchema = Joi.object({
   fecha_entrada: Joi.string().isoDate().optional(),
@@ -39,6 +50,6 @@ const actualizarReservaSchema = Joi.object({
   num_huespedes: Joi.number().integer().min(1).max(20).optional(),
   estado: Joi.string().valid('pendiente', 'confirmada', 'cancelada', 'completada').optional(),
   metodo_pago: Joi.string().max(50).allow(null).optional(),
-}).min(1);
+}).min(1).unknown(false);
 
 module.exports = { crearReservaSchema, actualizarReservaSchema };

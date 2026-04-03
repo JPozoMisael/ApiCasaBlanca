@@ -1,35 +1,33 @@
-const tiposHabitacionService = require('../services/tipos_habitacion.service');
+const tiposService = require('../services/tipos_habitacion.service');
 
-/**
- * GET /api/v1/tipos-habitacion
- * Filtros opcionales:
- *  ?hotel_id
- */
-async function listarPorHotel(req, res, next) {
+async function listar(req, res, next) {
   try {
-    const filtros = {
-      hotel_id: req.query.hotel_id,
-    };
-
-    const tipos = await tiposHabitacionService.listarTipos(filtros);
+    const tipos = await tiposService.listarTipos();
 
     res.status(200).json({
       ok: true,
       data: tipos,
+      meta: { total: tipos.length },
     });
+
   } catch (error) {
+    console.error('Error listar tipos:', error.message);
     next(error);
   }
 }
 
-/**
- * GET /api/v1/tipos-habitacion/:id
- */
 async function obtenerPorId(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
 
-    const tipo = await tiposHabitacionService.obtenerTipoPorId(id);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
+
+    const tipo = await tiposService.obtenerTipoPorId(id);
 
     if (!tipo) {
       return res.status(404).json({
@@ -42,84 +40,94 @@ async function obtenerPorId(req, res, next) {
       ok: true,
       data: tipo,
     });
+
   } catch (error) {
+    console.error('Error obtener tipo:', error.message);
     next(error);
   }
 }
 
-/**
- * POST /api/v1/tipos-habitacion
- * Protegido en routes (admin)
- */
 async function crear(req, res, next) {
   try {
-    const tipo = await tiposHabitacionService.crearTipo(req.body);
+    const tipo = await tiposService.crearTipo(req.body);
 
     res.status(201).json({
       ok: true,
-      message: 'Tipo de habitación creado correctamente',
+      message: 'Tipo creado correctamente',
       data: tipo,
     });
+
   } catch (error) {
+    console.error('Error crear tipo:', error.message);
     next(error);
   }
 }
 
-/**
- * PUT /api/v1/tipos-habitacion/:id
- * Protegido en routes (admin)
- */
 async function actualizar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
 
-    const tipo = await tiposHabitacionService.actualizarTipo(id, req.body);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
+
+    const tipo = await tiposService.actualizarTipo(id, req.body);
 
     if (!tipo) {
       return res.status(404).json({
         ok: false,
-        message: 'Tipo de habitación no encontrado',
+        message: 'Tipo no encontrado',
       });
     }
 
     res.status(200).json({
       ok: true,
-      message: 'Tipo de habitación actualizado correctamente',
+      message: 'Tipo actualizado correctamente',
       data: tipo,
     });
+
   } catch (error) {
+    console.error('Error actualizar tipo:', error.message);
     next(error);
   }
 }
 
-/**
- * DELETE /api/v1/tipos-habitacion/:id
- * Protegido en routes (admin)
- */
 async function eliminar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
 
-    const okDelete = await tiposHabitacionService.eliminarTipo(id);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
+
+    const okDelete = await tiposService.eliminarTipo(id);
 
     if (!okDelete) {
       return res.status(404).json({
         ok: false,
-        message: 'Tipo de habitación no encontrado',
+        message: 'Tipo no encontrado',
       });
     }
 
     res.status(200).json({
       ok: true,
-      message: 'Tipo de habitación eliminado correctamente',
+      message: 'Tipo eliminado correctamente',
     });
+
   } catch (error) {
+    console.error('Error eliminar tipo:', error.message);
     next(error);
   }
 }
 
 module.exports = {
-  listarPorHotel,
+  listar,
   obtenerPorId,
   crear,
   actualizar,

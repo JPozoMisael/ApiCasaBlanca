@@ -5,7 +5,14 @@ const limiterBasico = rateLimit({
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, message: 'Demasiadas solicitudes, intenta más tarde' },
+
+  // 🔥 Mejora: control explícito por IP
+  keyGenerator: (req) => req.ip,
+
+  message: {
+    ok: false,
+    message: 'Demasiadas solicitudes, intenta más tarde',
+  },
 });
 
 const limiterLogin = rateLimit({
@@ -13,7 +20,13 @@ const limiterLogin = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, message: 'Demasiados intentos de login, intenta más tarde' },
+
+  keyGenerator: (req) => req.ip,
+
+  message: {
+    ok: false,
+    message: 'Demasiados intentos de login, intenta más tarde',
+  },
 });
 
 module.exports = { limiterBasico, limiterLogin };

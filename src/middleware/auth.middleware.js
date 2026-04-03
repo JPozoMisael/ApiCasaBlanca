@@ -13,10 +13,17 @@ module.exports = function auth(req, res, next) {
 
     const payload = verificarToken(token);
 
-    // payload esperado: { id, rol, iat, exp }
+    //  Validación fuerte
+    if (!payload?.id || !payload?.rol) {
+      return res.status(401).json({
+        ok: false,
+        message: 'Token inválido',
+      });
+    }
+
     req.user = payload;
 
-    return next();
+    next();
   } catch (err) {
     return res.status(401).json({
       ok: false,

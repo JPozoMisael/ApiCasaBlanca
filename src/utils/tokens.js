@@ -1,40 +1,45 @@
-// src/utils/tokens.js
 const jwt = require('jsonwebtoken');
 
-/**
- * Genera un JWT
- * @param {object} payload - { id, rol, ... }
- * @param {string} expiresIn - ej: '8h', '7d'
- */
+function getSecret() {
+  if (!process.env.JWT_SECRET) {
+    const err = new Error('JWT_SECRET no configurado');
+    err.statusCode = 500;
+    throw err;
+  }
+  return process.env.JWT_SECRET;
+}
+
 function generarToken(payload, expiresIn = '8h') {
-  if (!process.env.JWT_SECRET) {
-    const err = new Error('JWT_SECRET no configurado');
-    err.statusCode = 500;
+  if (!payload || typeof payload !== 'object') {
+    const err = new Error('Payload inválido para JWT');
+    err.statusCode = 400;
     throw err;
   }
 
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
+  return jwt.sign(payload, getSecret(), { expiresIn });
 }
 
-/**
- * Verifica un JWT y devuelve el payload
- */
 function verificarToken(token) {
-  if (!process.env.JWT_SECRET) {
-    const err = new Error('JWT_SECRET no configurado');
-    err.statusCode = 500;
+  try {
+    return jwt.verify(token, getSecret());
+  } catch (error) {
+    const err = new Error('Token inválido o expirado');
+    err.statusCode = 401;
     throw err;
   }
-
-  return jwt.verify(token, process.env.JWT_SECRET);
 }
 
-/**
- * Extrae el token de "Authorization: Bearer <token>"
- */
 function extraerBearerToken(authorizationHeader = '') {
-  const [type, token] = authorizationHeader.split(' ');
+  if (!authorizationHeader) return null;
+
+  const parts = authorizationHeader.split(' ');
+
+  if (parts.length !== 2) return null;
+
+  const [type, token] = parts;
+
   if (type !== 'Bearer' || !token) return null;
+
   return token;
 }
 

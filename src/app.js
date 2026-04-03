@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
 
 const routes = require('./routes');
 const notFound = require('./middleware/notFound.middleware');
@@ -10,16 +12,28 @@ const app = express();
 
 /*
 |--------------------------------------------------------------------------
+| Seguridad base
+|--------------------------------------------------------------------------
+*/
+
+// Protege headers HTTP
+app.use(helmet());
+
+// Logs solo en desarrollo
+if ((process.env.NODE_ENV || '').toLowerCase() === 'development') {
+  app.use(morgan('dev'));
+}
+
+/*
+|--------------------------------------------------------------------------
 | Configuracion base
 |--------------------------------------------------------------------------
 */
 
-// Limite para JSON
+// Limite JSON
 app.use(express.json({ limit: process.env.JSON_LIMIT || '1mb' }));
 
-// CORS controlado por variable de entorno
-// Ejemplo:
-// CORS_ORIGINS=http://localhost:8100,https://tudominio.com
+// CORS dinámico
 const rawOrigins = process.env.CORS_ORIGINS || '*';
 
 const allowedOrigins =
@@ -33,17 +47,17 @@ const allowedOrigins =
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Permitir requests sin Origin:
-      // Postman, aplicaciones moviles o llamadas servidor a servidor
+      // Permitir requests sin origin (Postman, apps móviles, backend)
       if (!origin) return callback(null, true);
 
-      // Permitir todos los origenes si se definio "*"
+      // Permitir todos si es '*'
       if (allowedOrigins === '*') return callback(null, true);
 
-      // Validar origen permitido
+      // Validar lista blanca
       if (allowedOrigins.includes(origin)) return callback(null, true);
 
-      return callback(new Error('CORS: Origen no permitido'), false);
+      // Bloquear sin romper la app
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -60,7 +74,7 @@ app.use(limiterBasico);
 |--------------------------------------------------------------------------
 */
 
-// Healthcheck para monitoreo
+// Healthcheck (para monitoreo)
 app.get('/health', (req, res) => {
   return res.status(200).json({
     ok: true,
@@ -70,7 +84,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Ruta raiz
+// Ruta raíz
 app.get('/', (req, res) => {
   return res.status(200).json({
     ok: true,
@@ -79,7 +93,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Prefijo versionado de API
+// Prefijo versionado
 const API_PREFIX = '/api/v1';
 
 // Rutas principales
@@ -90,6 +104,7 @@ app.use(API_PREFIX, routes);
 | Manejo global de errores
 |--------------------------------------------------------------------------
 */
+
 app.use(notFound);
 app.use(errorHandler);
 

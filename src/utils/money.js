@@ -1,5 +1,9 @@
 function redondear(valor, decimales = 2) {
-  return Number(Number(valor).toFixed(decimales));
+  const n = Number(valor);
+
+  if (!Number.isFinite(n)) return 0;
+
+  return Number(n.toFixed(decimales));
 }
 
 function esMontoValido(valor) {

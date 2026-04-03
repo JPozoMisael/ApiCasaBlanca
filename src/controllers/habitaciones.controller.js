@@ -1,17 +1,10 @@
 const habitacionesService = require('../services/habitacion.service');
 
-/**
- * GET /api/v1/habitaciones
- * Filtros opcionales:
- *  ?hotel_id
- *  ?tipo_habitacion_id
- *  ?estado
- */
 async function listar(req, res, next) {
   try {
     const filtros = {
-      hotel_id: req.query.hotel_id,
-      tipo_habitacion_id: req.query.tipo_habitacion_id,
+      hotel_id: req.query.hotel_id ? Number(req.query.hotel_id) : undefined,
+      tipo_habitacion_id: req.query.tipo_habitacion_id ? Number(req.query.tipo_habitacion_id) : undefined,
       estado: req.query.estado,
     };
 
@@ -20,18 +13,25 @@ async function listar(req, res, next) {
     res.status(200).json({
       ok: true,
       data: habitaciones,
+      meta: { total: habitaciones.length },
     });
+
   } catch (error) {
+    console.error('Error listar habitaciones:', error.message);
     next(error);
   }
 }
 
-/**
- * GET /api/v1/habitaciones/:id
- */
 async function obtenerPorId(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
     const habitacion = await habitacionesService.obtenerHabitacionPorId(id);
 
@@ -46,15 +46,13 @@ async function obtenerPorId(req, res, next) {
       ok: true,
       data: habitacion,
     });
+
   } catch (error) {
+    console.error('Error obtener habitación:', error.message);
     next(error);
   }
 }
 
-/**
- * POST /api/v1/habitaciones
- * Protegido en routes (admin/empleado)
- */
 async function crear(req, res, next) {
   try {
     const habitacion = await habitacionesService.crearHabitacion(req.body);
@@ -64,18 +62,23 @@ async function crear(req, res, next) {
       message: 'Habitación creada correctamente',
       data: habitacion,
     });
+
   } catch (error) {
+    console.error('Error crear habitación:', error.message);
     next(error);
   }
 }
 
-/**
- * PUT /api/v1/habitaciones/:id
- * Protegido en routes (admin/empleado)
- */
 async function actualizar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
     const habitacion = await habitacionesService.actualizarHabitacion(id, req.body);
 
@@ -91,18 +94,23 @@ async function actualizar(req, res, next) {
       message: 'Habitación actualizada correctamente',
       data: habitacion,
     });
+
   } catch (error) {
+    console.error('Error actualizar habitación:', error.message);
     next(error);
   }
 }
 
-/**
- * DELETE /api/v1/habitaciones/:id
- * Protegido en routes (admin)
- */
 async function eliminar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
     const okDelete = await habitacionesService.eliminarHabitacion(id);
 
@@ -117,7 +125,9 @@ async function eliminar(req, res, next) {
       ok: true,
       message: 'Habitación eliminada correctamente',
     });
+
   } catch (error) {
+    console.error('Error eliminar habitación:', error.message);
     next(error);
   }
 }

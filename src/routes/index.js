@@ -13,15 +13,40 @@ const reportesRoutes = require('./reportes.routes');
 
 const router = express.Router();
 
+/*
+|--------------------------------------------------------------------------
+| Info API
+|--------------------------------------------------------------------------
+*/
+
 router.get('/', (req, res) => {
-  res.json({ ok: true, message: 'API Casa Blanca v1 ✅' });
+  res.json({
+    ok: true,
+    message: 'API Casa Blanca v1',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/auth',
+      hoteles: '/hoteles',
+      habitaciones: '/habitaciones',
+      reservas: '/reservas',
+      pagos: '/pagos',
+      servicios: '/servicios',
+      reportes: '/reportes',
+    },
+  });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Rutas principales
+|--------------------------------------------------------------------------
+*/
 
 router.use('/auth', authRoutes);
 router.use('/admin', adminRoutes);
 
 router.use('/hoteles', hotelesRoutes);
-router.use('/tipos-habitacion', tiposHabitacionRoutes);
+router.use('/tipos-habitaciones', tiposHabitacionRoutes); // 🔥 corregido
 router.use('/habitaciones', habitacionesRoutes);
 
 router.use('/clientes', clientesRoutes);

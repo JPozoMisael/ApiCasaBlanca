@@ -2,34 +2,32 @@ const pagosRepo = require('../repositories/pagos.repo');
 const { sequelize } = require('../config/db');
 const { models } = require('../models');
 
+/**
+ * LISTAR
+ */
 async function listarPagos(filtros = {}) {
   return pagosRepo.listar(filtros);
 }
 
+/**
+ * REGISTRAR PAGO
+ */
 async function registrarPago(data) {
-  // Validación mínima
   if (!data?.reserva_id || data?.monto == null || !data?.metodo) {
-    const err = new Error('reserva_id, monto y metodo son obligatorios');
-    err.statusCode = 400;
-    throw err;
+    throw crearError('reserva_id, monto y metodo son obligatorios', 400);
   }
 
   const monto = Number(data.monto);
   if (!Number.isFinite(monto) || monto <= 0) {
-    const err = new Error('monto debe ser un número mayor a 0');
-    err.statusCode = 400;
-    throw err;
+    throw crearError('monto inválido', 400);
   }
 
-  // Validar que la reserva exista
   const reserva = await models.Reserva.findByPk(data.reserva_id);
+
   if (!reserva) {
-    const err = new Error('Reserva no existe');
-    err.statusCode = 404;
-    throw err;
+    throw crearError('Reserva no existe', 404);
   }
 
-  // Si no mandan estado, por defecto pendiente
   if (!data.estado) data.estado = 'pendiente';
 
   const pago = await pagosRepo.crear({
@@ -39,34 +37,35 @@ async function registrarPago(data) {
     estado: data.estado,
   });
 
-  // Si llega como completado, confirmar reserva (opcional pero recomendado)
-  if (pago.estado === 'completado' && reserva.estado === 'pendiente') {
-    await reserva.update({ estado: 'confirmada', metodo_pago: pago.metodo });
-  }
-
   return pago;
 }
 
+/**
+ * REGISTRAR PAGO + CONFIRMAR
+ */
 async function registrarPagoYConfirmarReserva({ reserva_id, monto, metodo }) {
   if (!reserva_id || monto == null || !metodo) {
-    const err = new Error('reserva_id, monto y metodo son obligatorios');
-    err.statusCode = 400;
-    throw err;
+    throw crearError('reserva_id, monto y metodo son obligatorios', 400);
   }
 
   const montoNum = Number(monto);
   if (!Number.isFinite(montoNum) || montoNum <= 0) {
-    const err = new Error('monto debe ser un número mayor a 0');
-    err.statusCode = 400;
-    throw err;
+    throw crearError('monto inválido', 400);
   }
 
   return sequelize.transaction(async (t) => {
-    const reserva = await models.Reserva.findByPk(reserva_id, { transaction: t });
+
+    const reserva = await models.Reserva.findByPk(reserva_id, {
+      transaction: t,
+      lock: t.LOCK.UPDATE, // 🔥 evita doble pago
+    });
+
     if (!reserva) {
-      const err = new Error('Reserva no existe');
-      err.statusCode = 404;
-      throw err;
+      throw crearError('Reserva no existe', 404);
+    }
+
+    if (montoNum < Number(reserva.precio_total)) {
+      throw crearError('Monto insuficiente', 400);
     }
 
     const pago = await models.Pago.create(
@@ -74,20 +73,32 @@ async function registrarPagoYConfirmarReserva({ reserva_id, monto, metodo }) {
         reserva_id,
         monto: montoNum,
         metodo,
-        estado: 'completado',
+        estado: 'aprobado', // 🔥 corregido
       },
       { transaction: t }
     );
 
     if (reserva.estado === 'pendiente') {
       await reserva.update(
-        { estado: 'confirmada', metodo_pago: metodo },
+        {
+          estado: 'confirmada',
+          metodo_pago: metodo,
+        },
         { transaction: t }
       );
     }
 
     return { pago, reserva };
   });
+}
+
+/**
+ * Helper error
+ */
+function crearError(msg, status = 500) {
+  const err = new Error(msg);
+  err.statusCode = status;
+  return err;
 }
 
 module.exports = {

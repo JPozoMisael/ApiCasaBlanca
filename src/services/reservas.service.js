@@ -9,24 +9,16 @@ function diasEntre(fechaInicio, fechaFin) {
   const a = new Date(fechaInicio);
   const b = new Date(fechaFin);
   const ms = b - a;
-  const dias = Math.ceil(ms / (1000 * 60 * 60 * 24));
-  return dias;
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
+function generarCodigoReserva() {
+  return `RES-${Date.now()}`;
 }
 
 /**
  * =========================================================
- * CREAR RESERVA (Transacción)
- * payload recomendado:
- * {
- *   cliente_id,
- *   hotel_id,
- *   fecha_entrada: "2026-01-10",
- *   fecha_salida: "2026-01-12",
- *   num_huespedes,
- *   habitaciones: [{ habitacion_id }],
- *   servicios: [{ servicio_id, cantidad }], // opcional
- *   pago: { metodo, monto } // opcional
- * }
+ * CREAR RESERVA (Transacción PRO)
  * =========================================================
  */
 async function crearReserva(payload) {
@@ -42,62 +34,49 @@ async function crearReserva(payload) {
   } = payload;
 
   if (!cliente_id || !hotel_id || !fecha_entrada || !fecha_salida || !num_huespedes) {
-    const err = new Error('Faltan campos obligatorios para la reserva');
-    err.statusCode = 400;
-    throw err;
+    throw crearError('Faltan campos obligatorios', 400);
   }
 
   if (!Array.isArray(habitaciones) || habitaciones.length < 1) {
-    const err = new Error('Debes enviar al menos una habitación para la reserva');
-    err.statusCode = 400;
-    throw err;
+    throw crearError('Debes enviar al menos una habitación', 400);
+  }
+
+  const hoy = new Date();
+  if (new Date(fecha_entrada) < hoy) {
+    throw crearError('No puedes reservar fechas pasadas', 400);
   }
 
   const noches = diasEntre(fecha_entrada, fecha_salida);
   if (noches <= 0) {
-    const err = new Error('fecha_salida debe ser mayor a fecha_entrada');
-    err.statusCode = 400;
-    throw err;
+    throw crearError('fecha_salida debe ser mayor a fecha_entrada', 400);
   }
 
   return sequelize.transaction(async (t) => {
-    // Validar existencia
     const [cliente, hotel] = await Promise.all([
       models.Cliente.findByPk(cliente_id, { transaction: t }),
       models.Hotel.findByPk(hotel_id, { transaction: t }),
     ]);
 
-    if (!cliente) {
-      const err = new Error('Cliente no existe');
-      err.statusCode = 404;
-      throw err;
-    }
-    if (!hotel) {
-      const err = new Error('Hotel no existe');
-      err.statusCode = 404;
-      throw err;
-    }
+    if (!cliente) throw crearError('Cliente no existe', 404);
+    if (!hotel) throw crearError('Hotel no existe', 404);
 
-    // Validar disponibilidad y calcular total
     let precioTotal = 0;
     const detallesCrear = [];
 
     for (const item of habitaciones) {
-      const habitacion = await models.Habitacion.findByPk(item.habitacion_id, { transaction: t });
+      const habitacion = await models.Habitacion.findByPk(item.habitacion_id, {
+        transaction: t,
+        lock: t.LOCK.UPDATE, // 🔥 evita doble reserva
+      });
 
       if (!habitacion) {
-        const err = new Error(`Habitación no existe: ${item.habitacion_id}`);
-        err.statusCode = 404;
-        throw err;
+        throw crearError(`Habitación no existe: ${item.habitacion_id}`, 404);
       }
 
       if (String(habitacion.hotel_id) !== String(hotel_id)) {
-        const err = new Error(`La habitación ${item.habitacion_id} no pertenece al hotel`);
-        err.statusCode = 400;
-        throw err;
+        throw crearError('Habitación no pertenece al hotel', 400);
       }
 
-      // disponibilidad
       const disp = await habitacionDisponible({
         habitacion_id: habitacion.id,
         fecha_entrada,
@@ -105,16 +84,13 @@ async function crearReserva(payload) {
       });
 
       if (!disp.disponible) {
-        const err = new Error(`Habitación no disponible (${disp.motivo})`);
-        err.statusCode = 409;
-        err.details = { habitacion_id: habitacion.id, ...disp };
-        throw err;
+        throw crearError(`No disponible: ${disp.motivo}`, 409, {
+          habitacion_id: habitacion.id,
+        });
       }
 
-      // precio por noche (por tipo de habitación)
-      const tipoId = habitacion.tipo_habitacion_id;
       const precioNoche = await obtenerPrecioNoche({
-        tipo_habitacion_id: tipoId,
+        tipo_habitacion_id: habitacion.tipo_habitacion_id,
         fecha: fecha_entrada,
       });
 
@@ -129,30 +105,27 @@ async function crearReserva(payload) {
       });
     }
 
-    // Servicios opcionales (sumar al total)
+    // Servicios
     const serviciosCrear = [];
-    if (Array.isArray(servicios) && servicios.length > 0) {
-      for (const s of servicios) {
-        const servicio = await models.Servicio.findByPk(s.servicio_id, { transaction: t });
-        if (!servicio || String(servicio.hotel_id) !== String(hotel_id)) {
-          const err = new Error('Servicio no válido para este hotel');
-          err.statusCode = 400;
-          throw err;
-        }
 
-        const cantidad = Number(s.cantidad || 1);
-        const precioUnit = Number(servicio.precio);
-        const subtotal = Number((cantidad * precioUnit).toFixed(2));
+    for (const s of servicios) {
+      const servicio = await models.Servicio.findByPk(s.servicio_id, { transaction: t });
 
-        precioTotal += subtotal;
-
-        serviciosCrear.push({
-          servicio_id: servicio.id,
-          cantidad,
-          precio_unitario: precioUnit,
-          subtotal,
-        });
+      if (!servicio || String(servicio.hotel_id) !== String(hotel_id)) {
+        throw crearError('Servicio inválido', 400);
       }
+
+      const cantidad = Number(s.cantidad || 1);
+      const subtotal = cantidad * Number(servicio.precio);
+
+      precioTotal += subtotal;
+
+      serviciosCrear.push({
+        servicio_id: servicio.id,
+        cantidad,
+        precio_unitario: servicio.precio,
+        subtotal,
+      });
     }
 
     // Crear reserva
@@ -165,12 +138,13 @@ async function crearReserva(payload) {
         num_huespedes,
         estado: 'pendiente',
         precio_total: Number(precioTotal.toFixed(2)),
+        codigo_reserva: generarCodigoReserva(),
         metodo_pago: pago?.metodo || null,
       },
       { transaction: t }
     );
 
-    // Crear detalle_reserva
+    // Detalles
     for (const d of detallesCrear) {
       await models.DetalleReserva.create(
         { reserva_id: reserva.id, ...d },
@@ -178,7 +152,7 @@ async function crearReserva(payload) {
       );
     }
 
-    // Crear servicios_reserva
+    // Servicios
     for (const sr of serviciosCrear) {
       await models.ServicioReserva.create(
         { reserva_id: reserva.id, ...sr },
@@ -186,24 +160,27 @@ async function crearReserva(payload) {
       );
     }
 
-    // Pago opcional
+    // Pago
     let pagoCreado = null;
+
     if (pago && pago.metodo && pago.monto) {
+      if (Number(pago.monto) < precioTotal) {
+        throw crearError('Monto insuficiente', 400);
+      }
+
       pagoCreado = await models.Pago.create(
         {
           reserva_id: reserva.id,
           metodo: pago.metodo,
           monto: pago.monto,
-          estado: 'completado',
+          estado: 'aprobado', // 🔥 corregido
         },
         { transaction: t }
       );
 
-      // confirmar reserva si se pagó
       await reserva.update({ estado: 'confirmada' }, { transaction: t });
     }
 
-    // Retornar la reserva completa (con includes)
     const reservaCompleta = await obtenerReservaPorId(reserva.id, { transaction: t });
 
     return { reserva: reservaCompleta, pago: pagoCreado };
@@ -212,11 +189,7 @@ async function crearReserva(payload) {
 
 /**
  * =========================================================
- * LISTAR RESERVAS (con includes)
- * filtros:
- *  - hotel_id
- *  - cliente_id
- *  - estado
+ * LISTAR
  * =========================================================
  */
 async function listarReservas(filtros = {}) {
@@ -247,7 +220,7 @@ async function listarReservas(filtros = {}) {
 
 /**
  * =========================================================
- * OBTENER RESERVA POR ID (con includes)
+ * OBTENER POR ID
  * =========================================================
  */
 async function obtenerReservaPorId(id, options = {}) {
@@ -272,15 +245,13 @@ async function obtenerReservaPorId(id, options = {}) {
 
 /**
  * =========================================================
- * ACTUALIZAR RESERVA (solo campos básicos)
- * NO modifica detalle_reserva ni servicios_reserva
+ * ACTUALIZAR
  * =========================================================
  */
 async function actualizarReserva(id, data) {
   const reserva = await models.Reserva.findByPk(id);
   if (!reserva) return null;
 
-  // Permitimos solo campos seguros
   const permitidos = [
     'fecha_entrada',
     'fecha_salida',
@@ -291,20 +262,16 @@ async function actualizarReserva(id, data) {
 
   const payload = {};
   for (const k of permitidos) {
-    if (typeof data[k] !== 'undefined') payload[k] = data[k];
+    if (data[k] !== undefined) payload[k] = data[k];
   }
 
-  // Validación básica si cambian fechas
   if (payload.fecha_entrada || payload.fecha_salida) {
     const entrada = payload.fecha_entrada || reserva.fecha_entrada;
     const salida = payload.fecha_salida || reserva.fecha_salida;
-    if (diasEntre(entrada, salida) <= 0) {
-      const err = new Error('fecha_salida debe ser mayor a fecha_entrada');
-      err.statusCode = 400;
-      throw err;
-    }
 
-    // Si quieres, aquí luego agregamos: revalidar disponibilidad de habitaciones actuales.
+    if (diasEntre(entrada, salida) <= 0) {
+      throw crearError('Fechas inválidas', 400);
+    }
   }
 
   await reserva.update(payload);
@@ -314,17 +281,28 @@ async function actualizarReserva(id, data) {
 
 /**
  * =========================================================
- * CANCELAR RESERVA
+ * CANCELAR
  * =========================================================
  */
 async function cancelarReserva(id) {
   const reserva = await models.Reserva.findByPk(id);
   if (!reserva) return null;
 
-  // Si ya está cancelada, no rompas
   if (reserva.estado === 'cancelada') return reserva;
 
   return reserva.update({ estado: 'cancelada' });
+}
+
+/**
+ * =========================================================
+ * Helper error
+ * =========================================================
+ */
+function crearError(mensaje, status = 500, details = null) {
+  const err = new Error(mensaje);
+  err.statusCode = status;
+  if (details) err.details = details;
+  return err;
 }
 
 module.exports = {

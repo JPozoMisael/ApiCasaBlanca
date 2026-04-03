@@ -2,11 +2,12 @@ const reservasService = require('../services/reservas.service');
 
 /**
  * POST /api/v1/reservas
- * Público (reserva online)
  */
 async function crear(req, res, next) {
   try {
-    const resultado = await reservasService.crearReserva(req.body);
+    const payload = req.body;
+
+    const resultado = await reservasService.crearReserva(payload);
 
     res.status(201).json({
       ok: true,
@@ -14,17 +15,13 @@ async function crear(req, res, next) {
       data: resultado,
     });
   } catch (error) {
+    console.error('Error crear reserva:', error.message);
     next(error);
   }
 }
 
 /**
  * GET /api/v1/reservas
- * Protegido (admin / empleado)
- * Filtros opcionales:
- *  ?hotel_id
- *  ?cliente_id
- *  ?estado
  */
 async function listar(req, res, next) {
   try {
@@ -39,19 +36,29 @@ async function listar(req, res, next) {
     res.status(200).json({
       ok: true,
       data: reservas,
+      meta: {
+        total: reservas.length,
+      },
     });
   } catch (error) {
+    console.error('Error listar reservas:', error.message);
     next(error);
   }
 }
 
 /**
  * GET /api/v1/reservas/:id
- * Protegido
  */
 async function obtenerPorId(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
     const reserva = await reservasService.obtenerReservaPorId(id);
 
@@ -67,18 +74,24 @@ async function obtenerPorId(req, res, next) {
       data: reserva,
     });
   } catch (error) {
+    console.error('Error obtener reserva:', error.message);
     next(error);
   }
 }
 
 /**
  * PUT /api/v1/reservas/:id
- * Protegido
- * Actualiza datos básicos (NO detalles ni pagos)
  */
 async function actualizar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
     const reserva = await reservasService.actualizarReserva(id, req.body);
 
@@ -95,17 +108,24 @@ async function actualizar(req, res, next) {
       data: reserva,
     });
   } catch (error) {
+    console.error('Error actualizar reserva:', error.message);
     next(error);
   }
 }
 
 /**
  * PATCH /api/v1/reservas/:id/cancelar
- * Protegido
  */
 async function cancelar(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
 
     const reserva = await reservasService.cancelarReserva(id);
 
@@ -122,6 +142,7 @@ async function cancelar(req, res, next) {
       data: reserva,
     });
   } catch (error) {
+    console.error('Error cancelar reserva:', error.message);
     next(error);
   }
 }

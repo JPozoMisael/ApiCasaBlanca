@@ -2,7 +2,7 @@ const Joi = require('joi');
 
 const crearTipoHabitacionSchema = Joi.object({
   hotel_id: Joi.number().integer().positive().required(),
-  nombre: Joi.string().min(2).max(50).required(),
+  nombre: Joi.string().min(2).max(50).trim().required(),
   descripcion: Joi.string().allow('', null),
   capacidad_maxima: Joi.number().integer().min(1).max(20).required(),
   metros_cuadrados: Joi.number().min(0).allow(null),
@@ -11,11 +11,11 @@ const crearTipoHabitacionSchema = Joi.object({
   tiene_vista: Joi.boolean().default(false),
   tiene_balcon: Joi.boolean().default(false),
   precio_base: Joi.number().min(0).required(),
-}).unknown(true); // por si tu tabla tiene campos extra
+}).unknown(false);
 
 const actualizarTipoHabitacionSchema = Joi.object({
   hotel_id: Joi.number().integer().positive().optional(),
-  nombre: Joi.string().min(2).max(50).optional(),
+  nombre: Joi.string().min(2).max(50).trim().optional(),
   descripcion: Joi.string().allow('', null).optional(),
   capacidad_maxima: Joi.number().integer().min(1).max(20).optional(),
   metros_cuadrados: Joi.number().min(0).allow(null).optional(),
@@ -24,6 +24,6 @@ const actualizarTipoHabitacionSchema = Joi.object({
   tiene_vista: Joi.boolean().optional(),
   tiene_balcon: Joi.boolean().optional(),
   precio_base: Joi.number().min(0).optional(),
-}).min(1).unknown(true);
+}).min(1).unknown(false);
 
 module.exports = { crearTipoHabitacionSchema, actualizarTipoHabitacionSchema };
