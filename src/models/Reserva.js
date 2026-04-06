@@ -40,8 +40,13 @@ const Reserva = sequelize.define(
       allowNull: false,
       validate: {
         isAfterFechaEntrada(value) {
-          if (this.fecha_entrada && value <= this.fecha_entrada) {
-            throw new Error('La fecha de salida debe ser mayor a la fecha de entrada');
+          if (this.fecha_entrada && value) {
+            const entrada = new Date(this.fecha_entrada);
+            const salida = new Date(value);
+
+            if (salida <= entrada) {
+              throw new Error('La fecha de salida debe ser mayor a la fecha de entrada');
+            }
           }
         },
       },
@@ -71,19 +76,28 @@ const Reserva = sequelize.define(
     subtotal: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      defaultValue: 0.00,
+      defaultValue: '0.00',
+      validate: {
+        min: 0,
+      },
     },
 
     impuestos: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      defaultValue: 0.00,
+      defaultValue: '0.00',
+      validate: {
+        min: 0,
+      },
     },
 
     precio_total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      defaultValue: 0.00,
+      defaultValue: '0.00',
+      validate: {
+        min: 0,
+      },
     },
 
     observaciones: {
@@ -95,6 +109,15 @@ const Reserva = sequelize.define(
     tableName: 'reservas',
     timestamps: true,
     underscored: true,
+
+    hooks: {
+      beforeSave: (reserva) => {
+        const subtotal = Number(reserva.subtotal || 0);
+        const impuestos = Number(reserva.impuestos || 0);
+
+        reserva.precio_total = (subtotal + impuestos).toFixed(2);
+      },
+    },
   }
 );
 

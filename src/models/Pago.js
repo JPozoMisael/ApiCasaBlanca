@@ -24,12 +24,23 @@ const Pago = sequelize.define(
     },
 
     metodo: {
-      type: DataTypes.ENUM('tarjeta', 'efectivo', 'transferencia', 'paypal', 'deposito'),
+      type: DataTypes.ENUM(
+        'tarjeta',
+        'efectivo',
+        'transferencia',
+        'paypal',
+        'deposito'
+      ),
       allowNull: false,
     },
 
     estado: {
-      type: DataTypes.ENUM('pendiente', 'aprobado', 'rechazado', 'anulado'),
+      type: DataTypes.ENUM(
+        'pendiente',
+        'aprobado',
+        'rechazado',
+        'anulado'
+      ),
       allowNull: false,
       defaultValue: 'pendiente',
     },
@@ -37,6 +48,7 @@ const Pago = sequelize.define(
     referencia: {
       type: DataTypes.STRING(100),
       allowNull: true,
+      unique: true, // 🔥 importante para pagos externos
     },
 
     observaciones: {
@@ -54,6 +66,25 @@ const Pago = sequelize.define(
     tableName: 'pagos',
     timestamps: true,
     underscored: true,
+
+    hooks: {
+      beforeValidate: (pago) => {
+        // 🔥 Normalizar monto
+        const monto = Number(pago.monto);
+
+        if (!Number.isFinite(monto) || monto <= 0) {
+          throw new Error('Monto inválido');
+        }
+
+        pago.monto = monto.toFixed(2);
+      },
+    },
+
+    indexes: [
+      { fields: ['reserva_id'] },
+      { fields: ['estado'] },
+      { unique: true, fields: ['referencia'] },
+    ],
   }
 );
 
