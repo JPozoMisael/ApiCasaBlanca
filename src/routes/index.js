@@ -15,7 +15,7 @@ const router = express.Router();
 
 /*
 |--------------------------------------------------------------------------
-| Info API
+| API INFO
 |--------------------------------------------------------------------------
 */
 
@@ -26,34 +26,40 @@ router.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       auth: '/auth',
-      hoteles: '/hoteles',
-      habitaciones: '/habitaciones',
-      reservas: '/reservas',
-      pagos: '/pagos',
-      servicios: '/servicios',
-      reportes: '/reportes',
+      hotels: '/hotels',
+      rooms: '/rooms',
+      roomTypes: '/room-types',
+      clients: '/clients',
+      bookings: '/bookings',
+      payments: '/payments',
+      services: '/services',
+      reports: '/reports',
+      admin: '/admin',
     },
   });
 });
 
 /*
 |--------------------------------------------------------------------------
-| Rutas principales
+| MAIN ROUTES (ENGLISH STANDARD)
 |--------------------------------------------------------------------------
 */
 
 router.use('/auth', authRoutes);
 router.use('/admin', adminRoutes);
 
-router.use('/hoteles', hotelesRoutes);
-router.use('/tipos-habitaciones', tiposHabitacionRoutes); // 🔥 corregido
-router.use('/habitaciones', habitacionesRoutes);
+// CORE
+router.use('/hotels', hotelesRoutes);
+router.use('/rooms', habitacionesRoutes);
+router.use('/room-types', tiposHabitacionRoutes);
 
-router.use('/clientes', clientesRoutes);
-router.use('/reservas', reservasRoutes);
-router.use('/pagos', pagosRoutes);
+// BUSINESS
+router.use('/clients', clientesRoutes);
+router.use('/bookings', reservasRoutes);
+router.use('/payments', pagosRoutes);
 
-router.use('/servicios', serviciosRoutes);
-router.use('/reportes', reportesRoutes);
+// EXTRA
+router.use('/services', serviciosRoutes);
+router.use('/reports', reportesRoutes);
 
 module.exports = router;
