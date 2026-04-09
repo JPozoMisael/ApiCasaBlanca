@@ -1,5 +1,7 @@
 const habitacionesService = require('../services/habitacion.service');
+const { Hotel } = require('../models');
 
+// ================= LISTAR =================
 async function listar(req, res, next) {
   try {
     const filtros = {
@@ -22,6 +24,42 @@ async function listar(req, res, next) {
   }
 }
 
+// ================= POR HOTEL =================
+async function obtenerPorHotel(req, res, next) {
+  try {
+    const { slug } = req.params;
+
+    const hotel = await Hotel.findOne({
+      where: { slug }
+    });
+
+    if (!hotel) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Hotel no encontrado'
+      });
+    }
+
+    const habitaciones = await habitacionesService.listarHabitaciones({
+      hotel_id: hotel.id
+    });
+
+    res.status(200).json({
+      ok: true,
+      data: habitaciones,
+      meta: {
+        hotel: hotel.nombre,
+        total: habitaciones.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error obtener habitaciones por hotel:', error.message);
+    next(error);
+  }
+}
+
+// ================= POR ID =================
 async function obtenerPorId(req, res, next) {
   try {
     const id = Number(req.params.id);
@@ -53,6 +91,7 @@ async function obtenerPorId(req, res, next) {
   }
 }
 
+// ================= CREAR =================
 async function crear(req, res, next) {
   try {
     const habitacion = await habitacionesService.crearHabitacion(req.body);
@@ -69,6 +108,7 @@ async function crear(req, res, next) {
   }
 }
 
+// ================= ACTUALIZAR =================
 async function actualizar(req, res, next) {
   try {
     const id = Number(req.params.id);
@@ -101,6 +141,7 @@ async function actualizar(req, res, next) {
   }
 }
 
+// ================= ELIMINAR =================
 async function eliminar(req, res, next) {
   try {
     const id = Number(req.params.id);
@@ -138,4 +179,5 @@ module.exports = {
   crear,
   actualizar,
   eliminar,
+  obtenerPorHotel
 };
