@@ -1,5 +1,6 @@
 const habitacionesService = require('../services/habitacion.service');
-const { Hotel } = require('../models');
+const { Hotel, models } = require('../models');
+const { Op } = require('sequelize');
 
 // ================= LISTAR =================
 async function listar(req, res, next) {
@@ -24,7 +25,7 @@ async function listar(req, res, next) {
   }
 }
 
-// =================  DISPONIBLES =================
+// ================= DISPONIBLES (🔥 PRO) =================
 async function obtenerDisponibles(req, res, next) {
   try {
 
@@ -42,6 +43,7 @@ async function obtenerDisponibles(req, res, next) {
       });
     }
 
+    // 🔍 Buscar hotel
     const hotel = await Hotel.findOne({
       where: { slug }
     });
@@ -53,16 +55,36 @@ async function obtenerDisponibles(req, res, next) {
       });
     }
 
+    // 🏨 Traer habitaciones con tipo
     let habitaciones = await habitacionesService.listarHabitaciones({
       hotel_id: hotel.id
     });
 
+    // 👥 FILTRO POR CAPACIDAD
     if (adults) {
       habitaciones = habitaciones.filter(h =>
-      (h.tipoHabitacion?.capacidad_maxima || 1) >= Number(adults)
+        (h.tipoHabitacion?.capacidad_maxima || 1) >= Number(adults)
       );
     }
-    console.log('PRIMERA HABITACION:', JSON.stringify(habitaciones[0], null, 2));
+
+    // 🔴 BLOQUEO POR RESERVAS (CLAVE)
+    const reservas = await models.Reserva.findAll({
+      where: {
+        [Op.and]: [
+          { fecha_entrada: { [Op.lt]: checkOut } },
+          { fecha_salida: { [Op.gt]: checkIn } }
+        ]
+      },
+      attributes: ['habitacion_id']
+    });
+
+    const ocupadas = reservas.map(r => r.habitacion_id);
+
+    // ❌ excluir ocupadas
+    habitaciones = habitaciones.filter(h => !ocupadas.includes(h.id));
+
+    // 🧪 DEBUG (puedes quitar luego)
+    console.log('DISPONIBLES:', habitaciones.length);
 
     res.status(200).json({
       ok: true,
