@@ -12,11 +12,15 @@ const {
 
 // ================= PUBLICO =================
 
-// IMPORTANTE: esta ruta debe ir antes de /:id
+// 🔥 NUEVA RUTA (CLAVE)
+router.get('/disponibles', controller.obtenerDisponibles);
+
+// IMPORTANTE: rutas específicas antes de dinámicas
 router.get('/hotel/:slug', controller.obtenerPorHotel);
 
 router.get('/', controller.listar);
 
+// 🔥 SIEMPRE AL FINAL
 router.get('/:id', controller.obtenerPorId);
 
 // ================= PROTEGIDO =================

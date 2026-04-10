@@ -24,6 +24,60 @@ async function listar(req, res, next) {
   }
 }
 
+// =================  DISPONIBLES =================
+async function obtenerDisponibles(req, res, next) {
+  try {
+
+    const {
+      hotel: slug,
+      checkIn,
+      checkOut,
+      adults
+    } = req.query;
+
+    if (!slug || !checkIn || !checkOut) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Parámetros incompletos'
+      });
+    }
+
+    // 🔥 buscar hotel por slug
+    const hotel = await Hotel.findOne({
+      where: { slug }
+    });
+
+    if (!hotel) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Hotel no encontrado'
+      });
+    }
+
+    let habitaciones = await habitacionesService.listarHabitaciones({
+      hotel_id: hotel.id
+    });
+
+    if (adults) {
+      habitaciones = habitaciones.filter(h => h.capacidad >= Number(adults));
+    }
+
+
+    res.status(200).json({
+      ok: true,
+      data: habitaciones,
+      meta: {
+        hotel: hotel.nombre,
+        total: habitaciones.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error obtener disponibles:', error.message);
+    next(error);
+  }
+}
+
 // ================= POR HOTEL =================
 async function obtenerPorHotel(req, res, next) {
   try {
@@ -179,5 +233,6 @@ module.exports = {
   crear,
   actualizar,
   eliminar,
-  obtenerPorHotel
+  obtenerPorHotel,
+  obtenerDisponibles 
 };
