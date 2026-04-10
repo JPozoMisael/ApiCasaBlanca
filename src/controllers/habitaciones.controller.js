@@ -42,7 +42,6 @@ async function obtenerDisponibles(req, res, next) {
       });
     }
 
-    // 🔥 buscar hotel por slug
     const hotel = await Hotel.findOne({
       where: { slug }
     });
@@ -59,9 +58,11 @@ async function obtenerDisponibles(req, res, next) {
     });
 
     if (adults) {
-      habitaciones = habitaciones.filter(h => h.capacidad >= Number(adults));
+      habitaciones = habitaciones.filter(h =>
+      (h.tipoHabitacion?.capacidad_maxima || 1) >= Number(adults)
+      );
     }
-
+    console.log('PRIMERA HABITACION:', JSON.stringify(habitaciones[0], null, 2));
 
     res.status(200).json({
       ok: true,

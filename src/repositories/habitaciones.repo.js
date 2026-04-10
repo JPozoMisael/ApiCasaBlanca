@@ -1,18 +1,39 @@
 const { models } = require('../models');
 
 const listar = (filtros = {}) => {
+
   const where = {};
+
   if (filtros.hotel_id) where.hotel_id = filtros.hotel_id;
   if (filtros.tipo_habitacion_id) where.tipo_habitacion_id = filtros.tipo_habitacion_id;
   if (filtros.estado) where.estado = filtros.estado;
 
   return models.Habitacion.findAll({
     where,
+
+    include: [
+      {
+        model: models.TipoHabitacion,
+        as: 'tipoHabitacion', // 🔥 CORREGIDO
+        attributes: ['id', 'nombre', 'capacidad_maxima']
+      }
+    ],
+
     order: [['id', 'DESC']],
   });
 };
 
-const obtenerPorId = (id) => models.Habitacion.findByPk(id);
+const obtenerPorId = (id) => {
+  return models.Habitacion.findByPk(id, {
+    include: [
+      {
+        model: models.TipoHabitacion,
+        as: 'tipoHabitacion', // 🔥 CORREGIDO
+        attributes: ['id', 'nombre', 'capacidad_maxima']
+      }
+    ]
+  });
+};
 
 const crear = (data) => models.Habitacion.create(data);
 
