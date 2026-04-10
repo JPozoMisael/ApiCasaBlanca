@@ -7,6 +7,8 @@ const routes = require('./routes');
 const notFound = require('./middleware/notFound.middleware');
 const errorHandler = require('./middleware/error.middleware');
 const { limiterBasico } = require('./middleware/rateLimit.middleware');
+const { applyAssociations } = require('./models');
+applyAssociations();
 
 const app = express();
 
@@ -47,16 +49,9 @@ const allowedOrigins =
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Permitir requests sin origin (Postman, apps móviles, backend)
       if (!origin) return callback(null, true);
-
-      // Permitir todos si es '*'
       if (allowedOrigins === '*') return callback(null, true);
-
-      // Validar lista blanca
       if (allowedOrigins.includes(origin)) return callback(null, true);
-
-      // Bloquear sin romper la app
       return callback(null, false);
     },
     credentials: true,
@@ -74,7 +69,7 @@ app.use(limiterBasico);
 |--------------------------------------------------------------------------
 */
 
-// Healthcheck (para monitoreo)
+// Healthcheck
 app.get('/health', (req, res) => {
   return res.status(200).json({
     ok: true,
@@ -84,7 +79,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Ruta raíz
+// Root
 app.get('/', (req, res) => {
   return res.status(200).json({
     ok: true,
