@@ -25,7 +25,7 @@ async function listar(req, res, next) {
   }
 }
 
-// ================= DISPONIBLES (🔥 PRO) =================
+// ================= DISPONIBLES =================
 async function obtenerDisponibles(req, res, next) {
   try {
 
@@ -39,14 +39,30 @@ async function obtenerDisponibles(req, res, next) {
     if (!slug || !checkIn || !checkOut) {
       return res.status(400).json({
         ok: false,
-        message: 'Parámetros incompletos'
+        message: 'Parámetros incompletos: se requiere hotel, checkIn y checkOut'
       });
     }
 
-    // 🔍 Buscar hotel
-    const hotel = await Hotel.findOne({
-      where: { slug }
-    });
+    // ✅ Convertir strings a Date para Sequelize
+    const fechaEntrada = new Date(checkIn);
+    const fechaSalida  = new Date(checkOut);
+
+    if (isNaN(fechaEntrada.getTime()) || isNaN(fechaSalida.getTime())) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Fechas inválidas. Formato esperado: YYYY-MM-DD'
+      });
+    }
+
+    if (fechaSalida <= fechaEntrada) {
+      return res.status(400).json({
+        ok: false,
+        message: 'checkOut debe ser posterior a checkIn'
+      });
+    }
+
+    // 🔍 Buscar hotel por slug
+    const hotel = await Hotel.findOne({ where: { slug } });
 
     if (!hotel) {
       return res.status(404).json({
@@ -55,36 +71,47 @@ async function obtenerDisponibles(req, res, next) {
       });
     }
 
-    // 🏨 Traer habitaciones con tipo
+    // 🏨 Traer habitaciones del hotel (con tipoHabitacion incluido)
     let habitaciones = await habitacionesService.listarHabitaciones({
       hotel_id: hotel.id
     });
 
-    // 👥 FILTRO POR CAPACIDAD
+    // 👥 Filtro por capacidad
     if (adults) {
-      habitaciones = habitaciones.filter(h =>
-        (h.tipoHabitacion?.capacidad_maxima || 1) >= Number(adults)
-      );
+      const numAdults = Number(adults);
+      if (!isNaN(numAdults)) {
+        habitaciones = habitaciones.filter(h =>
+          (h.tipoHabitacion?.capacidad_maxima || 1) >= numAdults
+        );
+      }
     }
 
-    // 🔴 BLOQUEO POR RESERVAS (CLAVE)
-    const reservas = await models.Reserva.findAll({
-      where: {
-        [Op.and]: [
-          { fecha_entrada: { [Op.lt]: checkOut } },
-          { fecha_salida: { [Op.gt]: checkIn } }
-        ]
-      },
-      attributes: ['habitacion_id']
+    // 🔴 Buscar habitaciones OCUPADAS via DetalleReserva + Reserva
+    // FIX: Reserva no tiene habitacion_id — la relación está en DetalleReserva
+    const detallesOcupados = await models.DetalleReserva.findAll({
+      attributes: ['habitacion_id'],
+      include: [{
+        model: models.Reserva,
+        as: 'reserva',
+        attributes: [],
+        where: {
+          // Ignorar reservas canceladas o no_show
+          estado: { [Op.notIn]: ['cancelada', 'no_show'] },
+          // Solapamiento de fechas: entrada < checkOut AND salida > checkIn
+          [Op.and]: [
+            { fecha_entrada: { [Op.lt]: fechaSalida } },
+            { fecha_salida:  { [Op.gt]: fechaEntrada } }
+          ]
+        }
+      }]
     });
 
-    const ocupadas = reservas.map(r => r.habitacion_id);
+    const ocupadas = detallesOcupados.map(d => d.habitacion_id);
 
-    // ❌ excluir ocupadas
+    // ❌ Excluir ocupadas
     habitaciones = habitaciones.filter(h => !ocupadas.includes(h.id));
 
-    // 🧪 DEBUG (puedes quitar luego)
-    console.log('DISPONIBLES:', habitaciones.length);
+    console.log(`DISPONIBLES [${slug}]:`, habitaciones.length);
 
     res.status(200).json({
       ok: true,
@@ -97,6 +124,7 @@ async function obtenerDisponibles(req, res, next) {
 
   } catch (error) {
     console.error('Error obtener disponibles:', error.message);
+    console.error('Stack:', error.stack);
     next(error);
   }
 }
@@ -106,9 +134,7 @@ async function obtenerPorHotel(req, res, next) {
   try {
     const { slug } = req.params;
 
-    const hotel = await Hotel.findOne({
-      where: { slug }
-    });
+    const hotel = await Hotel.findOne({ where: { slug } });
 
     if (!hotel) {
       return res.status(404).json({
@@ -257,5 +283,5 @@ module.exports = {
   actualizar,
   eliminar,
   obtenerPorHotel,
-  obtenerDisponibles 
+  obtenerDisponibles,
 };
