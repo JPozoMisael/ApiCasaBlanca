@@ -48,7 +48,7 @@ const DetalleReserva = sequelize.define(
     },
   },
   {
-    tableName: 'detalle_reserva',
+    tableName: 'detalle_reservas', // ✅ CORREGIDO: era 'detalle_reserva'
     timestamps: true,
     underscored: true,
     indexes: [
