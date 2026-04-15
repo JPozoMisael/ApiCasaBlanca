@@ -8,34 +8,36 @@ const notFound = require('./middleware/notFound.middleware');
 const errorHandler = require('./middleware/error.middleware');
 const { limiterBasico } = require('./middleware/rateLimit.middleware');
 const { applyAssociations } = require('./models');
+
 applyAssociations();
 
 const app = express();
 
 /*
 |--------------------------------------------------------------------------
-| Seguridad base
+| SEGURIDAD
 |--------------------------------------------------------------------------
 */
 
-// Protege headers HTTP
+// Headers seguros
 app.use(helmet());
 
-// Logs solo en desarrollo
+// Logs (solo desarrollo)
 if ((process.env.NODE_ENV || '').toLowerCase() === 'development') {
   app.use(morgan('dev'));
 }
 
 /*
 |--------------------------------------------------------------------------
-| Configuracion base
+| CONFIG BASE
 |--------------------------------------------------------------------------
 */
 
-// Limite JSON
+// JSON
 app.use(express.json({ limit: process.env.JSON_LIMIT || '1mb' }));
 
-// CORS dinámico
+// ================= CORS =================
+
 const rawOrigins = process.env.CORS_ORIGINS || '*';
 
 const allowedOrigins =
@@ -43,15 +45,22 @@ const allowedOrigins =
     ? '*'
     : rawOrigins
         .split(',')
-        .map((origin) => origin.trim())
+        .map((o) => o.trim())
         .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Permitir Postman / server-side
       if (!origin) return callback(null, true);
+
       if (allowedOrigins === '*') return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.warn('CORS bloqueado:', origin);
       return callback(null, false);
     },
     credentials: true,
@@ -65,15 +74,16 @@ app.use(limiterBasico);
 
 /*
 |--------------------------------------------------------------------------
-| Rutas base
+| HEALTH + ROOT
 |--------------------------------------------------------------------------
 */
 
 // Healthcheck
 app.get('/health', (req, res) => {
-  return res.status(200).json({
+  res.status(200).json({
     ok: true,
     service: 'API Casa Blanca',
+    version: 'v1',
     env: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
   });
@@ -81,22 +91,43 @@ app.get('/health', (req, res) => {
 
 // Root
 app.get('/', (req, res) => {
-  return res.status(200).json({
+  res.status(200).json({
     ok: true,
     message: 'API Casa Blanca funcionando',
-    health: '/health',
+    endpoints: {
+      health: '/health',
+      api: '/api/v1',
+    },
   });
 });
 
-// Prefijo versionado
+/*
+|--------------------------------------------------------------------------
+| API ROUTES
+|--------------------------------------------------------------------------
+*/
+
 const API_PREFIX = '/api/v1';
 
-// Rutas principales
 app.use(API_PREFIX, routes);
 
 /*
 |--------------------------------------------------------------------------
-| Manejo global de errores
+| DEBUG (OPCIONAL PERO MUY ÚTIL)
+|--------------------------------------------------------------------------
+*/
+
+// Log simple de rutas (solo dev)
+if ((process.env.NODE_ENV || '').toLowerCase() === 'development') {
+  app.use((req, res, next) => {
+    console.log(`➡️ ${req.method} ${req.originalUrl}`);
+    next();
+  });
+}
+
+/*
+|--------------------------------------------------------------------------
+| ERRORES
 |--------------------------------------------------------------------------
 */
 

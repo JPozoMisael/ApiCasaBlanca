@@ -126,10 +126,29 @@ async function eliminar(req, res, next) {
   }
 }
 
+/* ================= RESUMEN ================= */
+
+async function resumen(req, res, next) {
+  try {
+    const data = await hotelesService.obtenerResumenHoteles();
+
+    res.status(200).json({
+      ok: true,
+      data,
+      meta: { total: data.length },
+    });
+
+  } catch (error) {
+    console.error('Error resumen hoteles:', error.message);
+    next(error);
+  }
+}
+
 module.exports = {
   listar,
   obtenerPorId,
   crear,
   actualizar,
   eliminar,
+  resumen, 
 };

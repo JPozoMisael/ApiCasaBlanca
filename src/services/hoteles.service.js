@@ -1,11 +1,15 @@
 // src/services/hoteles.service.js
+
 const Hotel = require('../models/Hotel');
+const { sequelize } = require('../config/db');
+
+/* ================= CRUD ================= */
 
 async function listarHoteles() {
-  const hoteles = await Hotel.findAll({
+  return await Hotel.findAll({
+    where: { estado: 'activo' },
     order: [['created_at', 'DESC']],
   });
-  return hoteles;
 }
 
 async function obtenerHotelPorId(id) {
@@ -14,8 +18,7 @@ async function obtenerHotelPorId(id) {
 }
 
 async function crearHotel(data) {
-  const hotel = await Hotel.create(data);
-  return hotel;
+  return await Hotel.create(data);
 }
 
 async function actualizarHotel(id, data) {
@@ -34,10 +37,42 @@ async function eliminarHotel(id) {
   return true;
 }
 
+/* ================= RESUMEN (BOOKING STYLE) ================= */
+
+async function obtenerResumenHoteles() {
+
+  const [rows] = await sequelize.query(`
+    SELECT 
+      h.id,
+      h.nombre,
+      h.slug,
+      MIN(hab.precio_noche) AS precio_desde,
+      COALESCE(
+        MAX(
+          CASE 
+            WHEN hab.imagen_url IS NOT NULL 
+             AND hab.imagen_url <> '' 
+            THEN hab.imagen_url 
+          END
+        ),
+        ''
+      ) AS imagen
+    FROM hoteles h
+    JOIN habitaciones hab ON hab.hotel_id = h.id
+    WHERE h.estado = 'activo'
+      AND hab.estado = 'disponible'
+    GROUP BY h.id, h.nombre, h.slug
+    ORDER BY precio_desde ASC
+  `);
+
+  return rows;
+}
+
 module.exports = {
   listarHoteles,
   obtenerHotelPorId,
   crearHotel,
   actualizarHotel,
   eliminarHotel,
+  obtenerResumenHoteles, 
 };
