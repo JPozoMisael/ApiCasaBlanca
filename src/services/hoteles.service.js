@@ -1,5 +1,3 @@
-// src/services/hoteles.service.js
-
 const Hotel = require('../models/Hotel');
 const { sequelize } = require('../config/db');
 
@@ -14,6 +12,17 @@ async function listarHoteles() {
 
 async function obtenerHotelPorId(id) {
   const hotel = await Hotel.findByPk(id);
+  return hotel || null;
+}
+
+async function obtenerPorSlug(slug) {
+  const hotel = await Hotel.findOne({
+    where: {
+      slug,
+      estado: 'activo'
+    }
+  });
+
   return hotel || null;
 }
 
@@ -46,7 +55,8 @@ async function obtenerResumenHoteles() {
       h.id,
       h.nombre,
       h.slug,
-      MIN(hab.precio_noche) AS precio_desde,
+      COALESCE(MIN(hab.precio_noche), 0) AS precio_desde,
+
       COALESCE(
         MAX(
           CASE 
@@ -55,24 +65,31 @@ async function obtenerResumenHoteles() {
             THEN hab.imagen_url 
           END
         ),
-        ''
+        'assets/img/default.jpg'
       ) AS imagen
+
     FROM hoteles h
-    JOIN habitaciones hab ON hab.hotel_id = h.id
+    LEFT JOIN habitaciones hab 
+      ON hab.hotel_id = h.id
+
     WHERE h.estado = 'activo'
-      AND hab.estado = 'disponible'
+
     GROUP BY h.id, h.nombre, h.slug
+
     ORDER BY precio_desde ASC
   `);
 
   return rows;
 }
 
+/* ================= EXPORT ================= */
+
 module.exports = {
   listarHoteles,
   obtenerHotelPorId,
+  obtenerPorSlug, 
   crearHotel,
   actualizarHotel,
   eliminarHotel,
-  obtenerResumenHoteles, 
+  obtenerResumenHoteles,
 };

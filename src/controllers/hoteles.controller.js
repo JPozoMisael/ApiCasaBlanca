@@ -144,6 +144,30 @@ async function resumen(req, res, next) {
   }
 }
 
+
+async function obtenerPorSlug(req, res, next) {
+  try {
+    const { slug } = req.params;
+
+    const hotel = await hotelesService.obtenerPorSlug(slug);
+
+    if (!hotel) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Hotel no encontrado',
+      });
+    }
+
+    res.status(200).json({
+      ok: true,
+      data: hotel,
+    });
+
+  } catch (error) {
+    console.error('Error obtener por slug:', error.message);
+    next(error);
+  }
+}
 module.exports = {
   listar,
   obtenerPorId,
@@ -151,4 +175,5 @@ module.exports = {
   actualizar,
   eliminar,
   resumen, 
+  obtenerPorSlug
 };
