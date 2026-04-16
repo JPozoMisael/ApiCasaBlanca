@@ -55,8 +55,8 @@ async function obtenerResumenHoteles() {
       h.id,
       h.nombre,
       h.slug,
-      COALESCE(MIN(hab.precio_noche), 0) AS precio_desde,
-
+      h.estrellas AS rating, 
+      MIN(hab.precio_noche) AS precio_desde,
       COALESCE(
         MAX(
           CASE 
@@ -65,23 +65,18 @@ async function obtenerResumenHoteles() {
             THEN hab.imagen_url 
           END
         ),
-        'assets/img/default.jpg'
+        ''
       ) AS imagen
-
     FROM hoteles h
-    LEFT JOIN habitaciones hab 
-      ON hab.hotel_id = h.id
-
+    JOIN habitaciones hab ON hab.hotel_id = h.id
     WHERE h.estado = 'activo'
-
-    GROUP BY h.id, h.nombre, h.slug
-
+      AND hab.estado = 'disponible'
+    GROUP BY h.id, h.nombre, h.slug, h.estrellas
     ORDER BY precio_desde ASC
   `);
 
   return rows;
 }
-
 /* ================= EXPORT ================= */
 
 module.exports = {
