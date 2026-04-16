@@ -7,8 +7,10 @@ const roles = require('../middleware/roles.middleware');
 const validate = require('../middleware/validate.middleware');
 const { crearHotelSchema, actualizarHotelSchema } = require('../validators/hotel.schema');
 
-// ================= PUBLICO =================
-router.get('/resumen', controller.resumen); // 🔥 PRIMERO
+router.get('/resumen', controller.resumen);
+
+router.get('/slug/:slug', controller.obtenerPorSlug);
+
 router.get('/', controller.listar);
 router.get('/:id', controller.obtenerPorId);
 
