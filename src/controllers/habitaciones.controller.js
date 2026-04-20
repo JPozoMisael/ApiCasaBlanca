@@ -33,7 +33,12 @@ async function obtenerDisponibles(req, res, next) {
       hotel: slug,
       checkIn,
       checkOut,
-      adults
+      adults,
+
+      precioMin,
+      precioMax,
+      capacidad,
+      sort
     } = req.query;
 
     if (!slug || !checkIn || !checkOut) {
@@ -43,7 +48,7 @@ async function obtenerDisponibles(req, res, next) {
       });
     }
 
-    // ✅ Convertir strings a Date para Sequelize
+    //  Convertir strings a Date para Sequelize
     const fechaEntrada = new Date(checkIn);
     const fechaSalida  = new Date(checkOut);
 
@@ -71,12 +76,12 @@ async function obtenerDisponibles(req, res, next) {
       });
     }
 
-    // 🏨 Traer habitaciones del hotel (con tipoHabitacion incluido)
+    //  Traer habitaciones del hotel (con tipoHabitacion incluido)
     let habitaciones = await habitacionesService.listarHabitaciones({
       hotel_id: hotel.id
     });
 
-    // 👥 Filtro por capacidad
+    //  Filtro por capacidad
     if (adults) {
       const numAdults = Number(adults);
       if (!isNaN(numAdults)) {
@@ -86,7 +91,7 @@ async function obtenerDisponibles(req, res, next) {
       }
     }
 
-    // 🔴 Buscar habitaciones OCUPADAS via DetalleReserva + Reserva
+    // Buscar habitaciones OCUPADAS via DetalleReserva + Reserva
     // FIX: Reserva no tiene habitacion_id — la relación está en DetalleReserva
     const detallesOcupados = await models.DetalleReserva.findAll({
       attributes: ['habitacion_id'],
@@ -108,9 +113,44 @@ async function obtenerDisponibles(req, res, next) {
 
     const ocupadas = detallesOcupados.map(d => d.habitacion_id);
 
-    // ❌ Excluir ocupadas
+    // Excluir ocupadas
     habitaciones = habitaciones.filter(h => !ocupadas.includes(h.id));
+    // ================= FILTROS AVANZADOS =================
 
+// Precio
+if (precioMin) {
+  habitaciones = habitaciones.filter(h =>
+    Number(h.precio_noche ?? h.precio ?? 0) >= Number(precioMin)
+  );
+}
+
+if (precioMax) {
+  habitaciones = habitaciones.filter(h =>
+    Number(h.precio_noche ?? h.precio ?? 0) <= Number(precioMax)
+  );
+}
+
+// Capacidad real (tipoHabitacion)
+if (capacidad) {
+  const cap = Number(capacidad);
+  habitaciones = habitaciones.filter(h =>
+    (h.tipoHabitacion?.capacidad_maxima || 1) >= cap
+  );
+}
+
+// ================= ORDENAMIENTO =================
+
+if (sort === 'precio_asc') {
+  habitaciones.sort((a, b) =>
+    (a.precio_noche ?? 0) - (b.precio_noche ?? 0)
+  );
+}
+
+if (sort === 'precio_desc') {
+  habitaciones.sort((a, b) =>
+    (b.precio_noche ?? 0) - (a.precio_noche ?? 0)
+  );
+}
     console.log(`DISPONIBLES [${slug}]:`, habitaciones.length);
 
     res.status(200).json({
