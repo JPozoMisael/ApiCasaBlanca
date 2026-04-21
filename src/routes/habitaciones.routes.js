@@ -20,9 +20,9 @@ router.get('/hotel/:slug', controller.obtenerPorHotel);
 
 router.get('/', controller.listar);
 
-// 🔥 SIEMPRE AL FINAL
 router.get('/:id', controller.obtenerPorId);
-
+router.get('/reviews/:hotelId', controller.obtenerReviews);
+router.post('/reviews', controller.crearReview);
 // ================= PROTEGIDO =================
 
 router.post(

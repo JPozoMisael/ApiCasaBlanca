@@ -34,15 +34,12 @@ async function obtenerDisponibles(req, res, next) {
       checkIn,
       checkOut,
       adults,
-
       precioMin,
       precioMax,
       capacidad,
       sort,
-
       page = 1,
       limit = 10
-
     } = req.query;
 
     if (!slug || !checkIn || !checkOut) {
@@ -86,7 +83,6 @@ async function obtenerDisponibles(req, res, next) {
     });
 
     const ocupadas = detallesOcupados.map(d => d.habitacion_id);
-
     habitaciones = habitaciones.filter(h => !ocupadas.includes(h.id));
 
     // ===== FILTROS =====
@@ -108,12 +104,26 @@ async function obtenerDisponibles(req, res, next) {
       );
     }
 
-    // ===== RANKING INTELIGENTE =====
+    // ===== REVIEWS HOTEL =====
+    const reviews = await models.Review.findAll({
+      where: { hotel_id: hotel.id }
+    });
+
+    let rating = 0;
+    let totalReviews = reviews.length;
+
+    if (totalReviews > 0) {
+      const sum = reviews.reduce((acc, r) => acc + Number(r.puntuacion), 0);
+      rating = +(sum / totalReviews).toFixed(1);
+    }
+
+    // ===== RANKING PRO =====
     habitaciones = habitaciones.map(h => {
 
       let score = 0;
 
       const precio = Number(h.precio_noche ?? 0);
+
       score += (1000 - precio);
 
       if (adults) {
@@ -125,11 +135,15 @@ async function obtenerDisponibles(req, res, next) {
         score += 50;
       }
 
+      score += rating * 20;
+
       score += Math.random() * 20;
 
       return {
         ...h,
-        score
+        score,
+        rating,
+        totalReviews
       };
     });
 
@@ -168,6 +182,7 @@ async function obtenerDisponibles(req, res, next) {
     });
 
   } catch (err) {
+    console.error('Error obtener disponibles:', err.message);
     next(err);
   }
 }
@@ -226,9 +241,26 @@ async function obtenerPorId(req, res, next) {
       });
     }
 
+    // ===== REVIEWS =====
+    const reviews = await models.Review.findAll({
+      where: { hotel_id: habitacion.hotel_id }
+    });
+
+    let rating = 0;
+    let totalReviews = reviews.length;
+
+    if (totalReviews > 0) {
+      const sum = reviews.reduce((acc, r) => acc + Number(r.puntuacion), 0);
+      rating = +(sum / totalReviews).toFixed(1);
+    }
+
     res.status(200).json({
       ok: true,
-      data: habitacion,
+      data: {
+        ...habitacion.toJSON(),
+        rating,
+        totalReviews
+      }
     });
 
   } catch (error) {
@@ -318,6 +350,69 @@ async function eliminar(req, res, next) {
     next(error);
   }
 }
+// ================= REVIEWS POR HOTEL =================
+async function obtenerReviews(req, res, next) {
+  try {
+
+    const hotelId = Number(req.params.hotelId);
+
+    if (isNaN(hotelId)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'hotelId inválido'
+      });
+    }
+
+    const reviews = await models.Review.findAll({
+      where: { hotel_id: hotelId },
+      order: [['created_at', 'DESC']]
+    });
+
+    res.json({
+      ok: true,
+      data: reviews
+    });
+
+  } catch (err) {
+    console.error('Error reviews:', err.message);
+    next(err);
+  }
+}
+
+async function crearReview(req, res, next) {
+  try {
+    const { hotel_id, puntuacion, comentario } = req.body;
+
+    if (!hotel_id || !puntuacion) {
+      return res.status(400).json({
+        ok: false,
+        message: 'hotel_id y puntuacion son obligatorios'
+      });
+    }
+
+    if (Number(puntuacion) < 1 || Number(puntuacion) > 10) {
+      return res.status(400).json({
+        ok: false,
+        message: 'puntuacion debe estar entre 1 y 10'
+      });
+    }
+
+    const review = await models.Review.create({
+      hotel_id,
+      puntuacion,
+      comentario
+    });
+
+    res.status(201).json({
+      ok: true,
+      data: review
+    });
+
+  } catch (err) {
+    console.error('Error crear review:', err.message);
+    next(err);
+  }
+}
 
 module.exports = {
   listar,
@@ -327,4 +422,6 @@ module.exports = {
   eliminar,
   obtenerPorHotel,
   obtenerDisponibles,
+  obtenerReviews,
+  crearReview
 };
