@@ -38,35 +38,23 @@ async function obtenerDisponibles(req, res, next) {
       precioMin,
       precioMax,
       capacidad,
-      sort
+      sort,
+
+      page = 1,
+      limit = 10
+
     } = req.query;
 
     if (!slug || !checkIn || !checkOut) {
       return res.status(400).json({
         ok: false,
-        message: 'Parámetros incompletos: se requiere hotel, checkIn y checkOut'
+        message: 'Parámetros incompletos'
       });
     }
 
-    //  Convertir strings a Date para Sequelize
     const fechaEntrada = new Date(checkIn);
-    const fechaSalida  = new Date(checkOut);
+    const fechaSalida = new Date(checkOut);
 
-    if (isNaN(fechaEntrada.getTime()) || isNaN(fechaSalida.getTime())) {
-      return res.status(400).json({
-        ok: false,
-        message: 'Fechas inválidas. Formato esperado: YYYY-MM-DD'
-      });
-    }
-
-    if (fechaSalida <= fechaEntrada) {
-      return res.status(400).json({
-        ok: false,
-        message: 'checkOut debe ser posterior a checkIn'
-      });
-    }
-
-    // 🔍 Buscar hotel por slug
     const hotel = await Hotel.findOne({ where: { slug } });
 
     if (!hotel) {
@@ -76,23 +64,11 @@ async function obtenerDisponibles(req, res, next) {
       });
     }
 
-    //  Traer habitaciones del hotel (con tipoHabitacion incluido)
     let habitaciones = await habitacionesService.listarHabitaciones({
       hotel_id: hotel.id
     });
 
-    //  Filtro por capacidad
-    if (adults) {
-      const numAdults = Number(adults);
-      if (!isNaN(numAdults)) {
-        habitaciones = habitaciones.filter(h =>
-          (h.tipoHabitacion?.capacidad_maxima || 1) >= numAdults
-        );
-      }
-    }
-
-    // Buscar habitaciones OCUPADAS via DetalleReserva + Reserva
-    // FIX: Reserva no tiene habitacion_id — la relación está en DetalleReserva
+    // ===== DISPONIBILIDAD =====
     const detallesOcupados = await models.DetalleReserva.findAll({
       attributes: ['habitacion_id'],
       include: [{
@@ -100,12 +76,10 @@ async function obtenerDisponibles(req, res, next) {
         as: 'reserva',
         attributes: [],
         where: {
-          // Ignorar reservas canceladas o no_show
           estado: { [Op.notIn]: ['cancelada', 'no_show'] },
-          // Solapamiento de fechas: entrada < checkOut AND salida > checkIn
           [Op.and]: [
             { fecha_entrada: { [Op.lt]: fechaSalida } },
-            { fecha_salida:  { [Op.gt]: fechaEntrada } }
+            { fecha_salida: { [Op.gt]: fechaEntrada } }
           ]
         }
       }]
@@ -113,59 +87,88 @@ async function obtenerDisponibles(req, res, next) {
 
     const ocupadas = detallesOcupados.map(d => d.habitacion_id);
 
-    // Excluir ocupadas
     habitaciones = habitaciones.filter(h => !ocupadas.includes(h.id));
-    // ================= FILTROS AVANZADOS =================
 
-// Precio
-if (precioMin) {
-  habitaciones = habitaciones.filter(h =>
-    Number(h.precio_noche ?? h.precio ?? 0) >= Number(precioMin)
-  );
-}
+    // ===== FILTROS =====
+    if (precioMin) {
+      habitaciones = habitaciones.filter(h =>
+        (h.precio_noche ?? 0) >= Number(precioMin)
+      );
+    }
 
-if (precioMax) {
-  habitaciones = habitaciones.filter(h =>
-    Number(h.precio_noche ?? h.precio ?? 0) <= Number(precioMax)
-  );
-}
+    if (precioMax) {
+      habitaciones = habitaciones.filter(h =>
+        (h.precio_noche ?? 0) <= Number(precioMax)
+      );
+    }
 
-// Capacidad real (tipoHabitacion)
-if (capacidad) {
-  const cap = Number(capacidad);
-  habitaciones = habitaciones.filter(h =>
-    (h.tipoHabitacion?.capacidad_maxima || 1) >= cap
-  );
-}
+    if (capacidad) {
+      habitaciones = habitaciones.filter(h =>
+        (h.tipoHabitacion?.capacidad_maxima || 1) >= Number(capacidad)
+      );
+    }
 
-// ================= ORDENAMIENTO =================
+    // ===== RANKING INTELIGENTE =====
+    habitaciones = habitaciones.map(h => {
 
-if (sort === 'precio_asc') {
-  habitaciones.sort((a, b) =>
-    (a.precio_noche ?? 0) - (b.precio_noche ?? 0)
-  );
-}
+      let score = 0;
 
-if (sort === 'precio_desc') {
-  habitaciones.sort((a, b) =>
-    (b.precio_noche ?? 0) - (a.precio_noche ?? 0)
-  );
-}
-    console.log(`DISPONIBLES [${slug}]:`, habitaciones.length);
+      const precio = Number(h.precio_noche ?? 0);
+      score += (1000 - precio);
 
-    res.status(200).json({
+      if (adults) {
+        const diff = Math.abs((h.tipoHabitacion?.capacidad_maxima || 1) - Number(adults));
+        score += (100 - diff * 10);
+      }
+
+      if (h.tipoHabitacion?.nombre?.toLowerCase().includes('suite')) {
+        score += 50;
+      }
+
+      score += Math.random() * 20;
+
+      return {
+        ...h,
+        score
+      };
+    });
+
+    // ===== ORDEN =====
+    if (sort === 'precio_asc') {
+      habitaciones.sort((a, b) =>
+        (a.precio_noche ?? 0) - (b.precio_noche ?? 0)
+      );
+    } else if (sort === 'precio_desc') {
+      habitaciones.sort((a, b) =>
+        (b.precio_noche ?? 0) - (a.precio_noche ?? 0)
+      );
+    } else {
+      habitaciones.sort((a, b) => b.score - a.score);
+    }
+
+    // ===== PAGINACIÓN =====
+    const total = habitaciones.length;
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+
+    const start = (pageNum - 1) * limitNum;
+    const end = start + limitNum;
+
+    const data = habitaciones.slice(start, end);
+
+    res.json({
       ok: true,
-      data: habitaciones,
+      data,
       meta: {
-        hotel: hotel.nombre,
-        total: habitaciones.length
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum)
       }
     });
 
-  } catch (error) {
-    console.error('Error obtener disponibles:', error.message);
-    console.error('Stack:', error.stack);
-    next(error);
+  } catch (err) {
+    next(err);
   }
 }
 
