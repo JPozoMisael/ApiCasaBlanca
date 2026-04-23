@@ -10,7 +10,14 @@ const Valoracion = sequelize.define(
       autoIncrement: true,
     },
 
+    // RELACIÓN REAL
     reserva_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+
+    // CLAVE NUEVA (para frontend rápido)
+    hotel_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -39,11 +46,18 @@ const Valoracion = sequelize.define(
     tableName: 'valoraciones',
     timestamps: true,
     underscored: true,
+
     indexes: [
       {
+        // 1 review por reserva
         name: 'uq_valoracion_reserva',
         unique: true,
         fields: ['reserva_id'],
+      },
+      {
+        // búsquedas rápidas por hotel
+        name: 'idx_valoracion_hotel',
+        fields: ['hotel_id'],
       },
     ],
   }
