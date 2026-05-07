@@ -12,7 +12,7 @@ const {
 
 // ================= PUBLICO =================
 
-// 🔥 NUEVA RUTA (CLAVE)
+//  NUEVA RUTA (CLAVE)
 router.get('/disponibles', controller.obtenerDisponibles);
 
 // IMPORTANTE: rutas específicas antes de dinámicas
