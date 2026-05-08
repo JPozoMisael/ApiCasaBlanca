@@ -23,6 +23,7 @@ const Habitacion = sequelize.define(
     numero_habitacion: {
       type: DataTypes.STRING(10),
       allowNull: false,
+
       validate: {
         notEmpty: true,
         len: [1, 10],
@@ -32,6 +33,7 @@ const Habitacion = sequelize.define(
     piso: {
       type: DataTypes.INTEGER,
       allowNull: true,
+
       validate: {
         min: 0,
       },
@@ -45,21 +47,62 @@ const Habitacion = sequelize.define(
         'limpieza',
         'inactiva'
       ),
+
       allowNull: false,
+
       defaultValue: 'disponible',
     },
   },
   {
     tableName: 'habitaciones',
+
     timestamps: true,
+
     underscored: true,
+
     indexes: [
       {
         unique: true,
-        fields: ['hotel_id', 'numero_habitacion'],
+        fields: [
+          'hotel_id',
+          'numero_habitacion',
+        ],
       },
     ],
   }
 );
+
+// ================= ASSOCIATIONS =================
+Habitacion.associate = (models) => {
+
+  // HOTEL
+  Habitacion.belongsTo(
+    models.Hotel,
+    {
+      foreignKey: 'hotel_id',
+      as: 'hotel',
+    }
+  );
+
+  // TIPO HABITACION
+  Habitacion.belongsTo(
+    models.TipoHabitacion,
+    {
+      foreignKey: 'tipo_habitacion_id',
+
+      as: 'tipoHabitacion',
+    }
+  );
+
+  // DETALLES RESERVA
+  Habitacion.hasMany(
+    models.DetalleReserva,
+    {
+      foreignKey: 'habitacion_id',
+
+      as: 'detallesReserva',
+    }
+  );
+};
 
 module.exports = Habitacion;

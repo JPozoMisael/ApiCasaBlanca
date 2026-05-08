@@ -4,31 +4,51 @@ const { Op } = require('sequelize');
 
 // ================= LISTAR =================
 async function listar(req, res, next) {
+
   try {
+
     const filtros = {
-      hotel_id: req.query.hotel_id ? Number(req.query.hotel_id) : undefined,
-      tipo_habitacion_id: req.query.tipo_habitacion_id ? Number(req.query.tipo_habitacion_id) : undefined,
-      estado: req.query.estado,
+
+      hotel_id:
+        req.query.hotel_id
+          ? Number(req.query.hotel_id)
+          : undefined,
+      tipo_habitacion_id:
+        req.query.tipo_habitacion_id
+          ? Number(req.query.tipo_habitacion_id)
+          : undefined,
+      estado:
+        req.query.estado,
     };
 
-    const habitaciones = await habitacionesService.listarHabitaciones(filtros);
-
+    const habitaciones =
+      await habitacionesService
+        .listarHabitaciones(filtros);
     res.status(200).json({
       ok: true,
       data: habitaciones,
-      meta: { total: habitaciones.length },
+      meta: {
+        total: habitaciones.length,
+      },
     });
 
   } catch (error) {
-    console.error('Error listar habitaciones:', error.message);
+    console.error(
+      'Error listar habitaciones:',
+      error
+    );
     next(error);
   }
 }
 
 // ================= DISPONIBLES =================
-async function obtenerDisponibles(req, res, next) {
-  try {
+async function obtenerDisponibles(
+  req,
+  res,
+  next
+) {
 
+  try {
     const {
       hotel: slug,
       checkIn,
@@ -40,135 +60,253 @@ async function obtenerDisponibles(req, res, next) {
       sort,
       page = 1,
       limit = 10
+
     } = req.query;
 
-    if (!slug || !checkIn || !checkOut) {
+    if (
+      !slug ||
+      !checkIn ||
+      !checkOut
+    ) {
+
       return res.status(400).json({
         ok: false,
-        message: 'Parámetros incompletos'
+        message:
+          'Parámetros incompletos'
       });
     }
 
-    const fechaEntrada = new Date(checkIn);
-    const fechaSalida = new Date(checkOut);
+    const fechaEntrada =
+      new Date(checkIn);
 
-    const hotel = await Hotel.findOne({ where: { slug } });
+    const fechaSalida =
+      new Date(checkOut);
+
+    const hotel =
+      await Hotel.findOne({
+        where: { slug }
+      });
 
     if (!hotel) {
+
       return res.status(404).json({
         ok: false,
-        message: 'Hotel no encontrado'
+        message:
+          'Hotel no encontrado'
       });
     }
 
-    let habitaciones = await habitacionesService.listarHabitaciones({
-      hotel_id: hotel.id
-    });
+    let habitaciones =
+      await habitacionesService
+        .listarHabitaciones({
+          hotel_id: hotel.id
+        });
 
-    // ===== DISPONIBILIDAD =====
-    const detallesOcupados = await models.DetalleReserva.findAll({
-      attributes: ['habitacion_id'],
-      include: [{
-        model: models.Reserva,
-        as: 'reserva',
-        attributes: [],
-        where: {
-          estado: { [Op.notIn]: ['cancelada', 'no_show'] },
-          [Op.and]: [
-            { fecha_entrada: { [Op.lt]: fechaSalida } },
-            { fecha_salida: { [Op.gt]: fechaEntrada } }
-          ]
-        }
-      }]
-    });
+    // ================= OCUPADAS =================
+    const detallesOcupados =
+      await models.DetalleReserva.findAll({
 
-    const ocupadas = detallesOcupados.map(d => d.habitacion_id);
-    habitaciones = habitaciones.filter(h => !ocupadas.includes(h.id));
+        attributes: [
+          'habitacion_id'
+        ],
 
-    // ===== FILTROS =====
+        include: [
+          {
+            model: models.Reserva,
+            as: 'reserva',
+            attributes: [],
+            where: {
+              estado: {
+                [Op.notIn]: [
+                  'cancelada',
+                  'no_show'
+                ]
+              },
+              [Op.and]: [
+                {
+                  fecha_entrada: {
+                    [Op.lt]: fechaSalida
+                  }
+                },
+                {
+                  fecha_salida: {
+                    [Op.gt]: fechaEntrada
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      });
+
+    const ocupadas =
+      detallesOcupados.map(
+        d => d.habitacion_id
+      );
+
+    habitaciones =
+      habitaciones.filter(
+        h => !ocupadas.includes(h.id)
+      );
+
+    // ================= FILTROS =================
     if (precioMin) {
-      habitaciones = habitaciones.filter(h =>
-        (h.precio_noche ?? 0) >= Number(precioMin)
-      );
+      habitaciones =
+        habitaciones.filter(
+          h =>
+            Number(
+              h.precio_noche ?? 0
+            ) >= Number(precioMin)
+        );
     }
-
     if (precioMax) {
-      habitaciones = habitaciones.filter(h =>
-        (h.precio_noche ?? 0) <= Number(precioMax)
-      );
+      habitaciones =
+        habitaciones.filter(
+          h =>
+            Number(
+              h.precio_noche ?? 0
+            ) <= Number(precioMax)
+        );
     }
-
     if (capacidad) {
-      habitaciones = habitaciones.filter(h =>
-        (h.tipoHabitacion?.capacidad_maxima || 1) >= Number(capacidad)
-      );
+      habitaciones =
+        habitaciones.filter(
+          h =>
+            (
+              h.tipoHabitacion
+                ?.capacidad_maxima || 1
+            ) >= Number(capacidad)
+        );
     }
 
-    // ===== REVIEWS HOTEL =====
-    const reviews = await models.Review.findAll({
-      where: { hotel_id: hotel.id }
-    });
+    // ================= REVIEWS =================
+    const reviews =
+      await models.Valoracion.findAll({
+        where: {
+          hotel_id: hotel.id
+        }
+      });
 
     let rating = 0;
-    let totalReviews = reviews.length;
+
+    let totalReviews =
+      reviews.length;
 
     if (totalReviews > 0) {
-      const sum = reviews.reduce((acc, r) => acc + Number(r.puntuacion), 0);
-      rating = +(sum / totalReviews).toFixed(1);
+      const sum =
+        reviews.reduce(
+          (acc, r) =>
+            acc + Number(r.puntuacion),
+          0
+        );
+
+      rating =
+        +(
+          sum /
+          totalReviews
+        ).toFixed(1);
     }
 
-    // ===== RANKING PRO =====
-    habitaciones = habitaciones.map(h => {
+    // ================= SCORE =================
+    habitaciones =
+      habitaciones.map(h => {
 
-      let score = 0;
+        let score = 0;
 
-      const precio = Number(h.precio_noche ?? 0);
+        const precio =
+          Number(
+            h.precio_noche ?? 0
+          );
 
-      score += (1000 - precio);
+        score +=
+          (1000 - precio);
 
-      if (adults) {
-        const diff = Math.abs((h.tipoHabitacion?.capacidad_maxima || 1) - Number(adults));
-        score += (100 - diff * 10);
-      }
+        if (adults) {
+          const diff =
+            Math.abs(
+              (
+                h.tipoHabitacion
+                  ?.capacidad_maxima || 1
+              ) - Number(adults)
+            );
 
-      if (h.tipoHabitacion?.nombre?.toLowerCase().includes('suite')) {
-        score += 50;
-      }
+          score +=
+            (100 - diff * 10);
+        }
 
-      score += rating * 20;
+        if (
+          h.tipoHabitacion
+            ?.nombre
+            ?.toLowerCase()
+            .includes('suite')
+        ) {
 
-      score += Math.random() * 20;
+          score += 50;
+        }
 
-      return {
-        ...h,
-        score,
-        rating,
-        totalReviews
-      };
-    });
+        score += rating * 20;
+        score += Math.random() * 20;
 
-    // ===== ORDEN =====
+        return {
+          ...h.toJSON(),
+          score,
+          rating,
+          totalReviews
+        };
+      });
+
+    // ================= SORT =================
     if (sort === 'precio_asc') {
-      habitaciones.sort((a, b) =>
-        (a.precio_noche ?? 0) - (b.precio_noche ?? 0)
+      habitaciones.sort(
+        (a, b) =>
+          (
+            a.precio_noche ?? 0
+          ) -
+          (
+            b.precio_noche ?? 0
+          )
       );
-    } else if (sort === 'precio_desc') {
-      habitaciones.sort((a, b) =>
-        (b.precio_noche ?? 0) - (a.precio_noche ?? 0)
+
+    } else if (
+      sort === 'precio_desc'
+    ) {
+
+      habitaciones.sort(
+        (a, b) =>
+          (
+            b.precio_noche ?? 0
+          ) -
+          (
+            a.precio_noche ?? 0
+          )
       );
+
     } else {
-      habitaciones.sort((a, b) => b.score - a.score);
+
+      habitaciones.sort(
+        (a, b) =>
+          b.score - a.score
+      );
     }
 
-    // ===== PAGINACIÓN =====
-    const total = habitaciones.length;
-    const pageNum = Number(page);
-    const limitNum = Number(limit);
+    // ================= PAGINACION =================
+    const total =
+      habitaciones.length;
 
-    const start = (pageNum - 1) * limitNum;
-    const end = start + limitNum;
+    const pageNum =
+      Number(page);
 
-    const data = habitaciones.slice(start, end);
+    const limitNum =
+      Number(limit);
+
+    const start =
+      (pageNum - 1) * limitNum;
+
+    const end =
+      start + limitNum;
+
+    const data =
+      habitaciones.slice(start, end);
 
     res.json({
       ok: true,
@@ -177,81 +315,140 @@ async function obtenerDisponibles(req, res, next) {
         total,
         page: pageNum,
         limit: limitNum,
-        pages: Math.ceil(total / limitNum)
+        pages:
+          Math.ceil(
+            total / limitNum
+          )
       }
     });
 
-  } catch (err) {
-    console.error('Error obtener disponibles:', err.message);
-    next(err);
+  } catch (error) {
+
+    console.error(
+      'Error obtener disponibles:',
+      error
+    );
+
+    next(error);
   }
 }
 
 // ================= POR HOTEL =================
-async function obtenerPorHotel(req, res, next) {
-  try {
-    const { slug } = req.params;
+async function obtenerPorHotel(
+  req,
+  res,
+  next
+) {
 
-    const hotel = await Hotel.findOne({ where: { slug } });
+  try {
+
+    const { slug } =
+      req.params;
+
+    const hotel =
+      await Hotel.findOne({
+        where: { slug }
+      });
 
     if (!hotel) {
+
       return res.status(404).json({
         ok: false,
-        message: 'Hotel no encontrado'
+        message:
+          'Hotel no encontrado'
       });
     }
 
-    const habitaciones = await habitacionesService.listarHabitaciones({
-      hotel_id: hotel.id
-    });
+    const habitaciones =
+      await habitacionesService
+        .listarHabitaciones({
+
+          hotel_id: hotel.id
+        });
 
     res.status(200).json({
       ok: true,
       data: habitaciones,
       meta: {
-        hotel: hotel.nombre,
-        total: habitaciones.length
+        hotel:
+          hotel.nombre,
+        total:
+          habitaciones.length
       }
     });
 
   } catch (error) {
-    console.error('Error obtener habitaciones por hotel:', error.message);
+
+    console.error(
+      'Error obtener habitaciones por hotel:',
+      error
+    );
+
     next(error);
   }
 }
 
 // ================= POR ID =================
-async function obtenerPorId(req, res, next) {
+async function obtenerPorId(
+  req,
+  res,
+  next
+) {
+
   try {
-    const id = Number(req.params.id);
+
+    const id =
+      Number(req.params.id);
 
     if (isNaN(id)) {
+
       return res.status(400).json({
         ok: false,
-        message: 'ID inválido',
+        message:
+          'ID inválido',
       });
     }
 
-    const habitacion = await habitacionesService.obtenerHabitacionPorId(id);
+    const habitacion =
+      await habitacionesService
+        .obtenerHabitacionPorId(id);
 
     if (!habitacion) {
+
       return res.status(404).json({
         ok: false,
-        message: 'Habitación no encontrada',
+        message:
+          'Habitación no encontrada',
       });
     }
 
-    // ===== REVIEWS =====
-    const reviews = await models.Review.findAll({
-      where: { hotel_id: habitacion.hotel_id }
-    });
+    // ================= REVIEWS =================
+    const reviews =
+      await models.Valoracion.findAll({
+        where: {
+          hotel_id:
+            habitacion.hotel_id
+        }
+      });
 
     let rating = 0;
-    let totalReviews = reviews.length;
+
+    let totalReviews =
+      reviews.length;
 
     if (totalReviews > 0) {
-      const sum = reviews.reduce((acc, r) => acc + Number(r.puntuacion), 0);
-      rating = +(sum / totalReviews).toFixed(1);
+      const sum =
+        reviews.reduce(
+          (acc, r) =>
+            acc + Number(r.puntuacion),
+          0
+        );
+
+      rating =
+        +(
+          sum /
+          totalReviews
+        ).toFixed(1);
     }
 
     res.status(200).json({
@@ -264,164 +461,129 @@ async function obtenerPorId(req, res, next) {
     });
 
   } catch (error) {
-    console.error('Error obtener habitación:', error.message);
+    console.error(
+      'Error obtener habitación:',
+      error
+    );
     next(error);
   }
 }
 
-// ================= CREAR =================
-async function crear(req, res, next) {
+// ================= REVIEWS =================
+async function obtenerReviews(
+  req,
+  res,
+  next
+) {
+
   try {
-    const habitacion = await habitacionesService.crearHabitacion(req.body);
-
-    res.status(201).json({
-      ok: true,
-      message: 'Habitación creada correctamente',
-      data: habitacion,
-    });
-
-  } catch (error) {
-    console.error('Error crear habitación:', error.message);
-    next(error);
-  }
-}
-
-// ================= ACTUALIZAR =================
-async function actualizar(req, res, next) {
-  try {
-    const id = Number(req.params.id);
-
-    if (isNaN(id)) {
-      return res.status(400).json({
-        ok: false,
-        message: 'ID inválido',
-      });
-    }
-
-    const habitacion = await habitacionesService.actualizarHabitacion(id, req.body);
-
-    if (!habitacion) {
-      return res.status(404).json({
-        ok: false,
-        message: 'Habitación no encontrada',
-      });
-    }
-
-    res.status(200).json({
-      ok: true,
-      message: 'Habitación actualizada correctamente',
-      data: habitacion,
-    });
-
-  } catch (error) {
-    console.error('Error actualizar habitación:', error.message);
-    next(error);
-  }
-}
-
-// ================= ELIMINAR =================
-async function eliminar(req, res, next) {
-  try {
-    const id = Number(req.params.id);
-
-    if (isNaN(id)) {
-      return res.status(400).json({
-        ok: false,
-        message: 'ID inválido',
-      });
-    }
-
-    const okDelete = await habitacionesService.eliminarHabitacion(id);
-
-    if (!okDelete) {
-      return res.status(404).json({
-        ok: false,
-        message: 'Habitación no encontrada',
-      });
-    }
-
-    res.status(200).json({
-      ok: true,
-      message: 'Habitación eliminada correctamente',
-    });
-
-  } catch (error) {
-    console.error('Error eliminar habitación:', error.message);
-    next(error);
-  }
-}
-// ================= REVIEWS POR HOTEL =================
-async function obtenerReviews(req, res, next) {
-  try {
-
-    const hotelId = Number(req.params.hotelId);
+    const hotelId =
+      Number(req.params.hotelId);
 
     if (isNaN(hotelId)) {
+
       return res.status(400).json({
         ok: false,
-        message: 'hotelId inválido'
+        message:
+          'hotelId inválido'
       });
     }
 
-    const reviews = await models.Review.findAll({
-      where: { hotel_id: hotelId },
-      order: [['created_at', 'DESC']]
-    });
+    const reviews =
+      await models.Valoracion.findAll({
+
+        where: {
+          hotel_id: hotelId
+        },
+
+        order: [
+          ['created_at', 'DESC']
+        ]
+      });
 
     res.json({
       ok: true,
       data: reviews
     });
 
-  } catch (err) {
-    console.error('Error reviews:', err.message);
-    next(err);
+  } catch (error) {
+    console.error(
+      'Error reviews:',
+      error
+    );
+
+    next(error);
   }
 }
 
-async function crearReview(req, res, next) {
+// ================= CREAR REVIEW =================
+async function crearReview(
+  req,
+  res,
+  next
+) {
+
   try {
-    const { hotel_id, puntuacion, comentario } = req.body;
 
-    if (!hotel_id || !puntuacion) {
-      return res.status(400).json({
-        ok: false,
-        message: 'hotel_id y puntuacion son obligatorios'
-      });
-    }
-
-    if (Number(puntuacion) < 1 || Number(puntuacion) > 10) {
-      return res.status(400).json({
-        ok: false,
-        message: 'puntuacion debe estar entre 1 y 10'
-      });
-    }
-
-    const review = await models.Review.create({
+    const {
       hotel_id,
       puntuacion,
       comentario
-    });
+
+    } = req.body;
+
+    if (
+      !hotel_id ||
+      !puntuacion
+    ) {
+
+      return res.status(400).json({
+        ok: false,
+        message:
+          'hotel_id y puntuacion son obligatorios'
+      });
+    }
+
+    if (
+      Number(puntuacion) < 1 ||
+      Number(puntuacion) > 10
+    ) {
+
+      return res.status(400).json({
+        ok: false,
+        message:
+          'puntuacion debe estar entre 1 y 10'
+      });
+    }
+
+    const review =
+      await models.Valoracion.create({
+        hotel_id,
+        puntuacion,
+        comentario
+      });
 
     res.status(201).json({
       ok: true,
       data: review
     });
 
-  } catch (err) {
-    console.error('Error crear review:', err.message);
-    next(err);
+  } catch (error) {
+
+    console.error(
+      'Error crear review:',
+      error
+    );
+
+    next(error);
   }
 }
 
 module.exports = {
   listar,
-  obtenerPorId,
-  crear,
-  actualizar,
-  eliminar,
-  obtenerPorHotel,
   obtenerDisponibles,
+  obtenerPorHotel,
+  obtenerPorId,
   obtenerReviews,
   crearReview
 };
