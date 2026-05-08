@@ -112,23 +112,26 @@ async function obtenerDisponibles(
 
       fechaSalida =
         new Date(checkOut);
-      
+
       const fechasValidas =
-      !isNaN(fechaEntrada.getTime()) &&
-      !isNaN(fechaSalida.getTime());
+        !isNaN(fechaEntrada.getTime()) &&
+        !isNaN(fechaSalida.getTime());
 
-      if(fechasValidas)  {
-        usarDisponibilidad = true; 
-         }
-      
-      if (fechaSalida <= fechaEntrada) {
-        return res.status(400).json({
-          ok: false,
+      if (fechasValidas) {
 
-          message:
-            'checkOut debe ser mayor que checkIn'
+        if (fechaSalida <= fechaEntrada) {
+
+          return res.status(400).json({
+
+            ok: false,
+
+            message:
+              'checkOut debe ser mayor que checkIn'
           });
         }
+
+        usarDisponibilidad = true;
+      }
     }
 
     // ================= HOTEL =================
@@ -214,7 +217,7 @@ async function obtenerDisponibles(
     }
 
     // ================= FILTROS =================
-    if (precioMin) {
+    if (precioMin !== undefined) {
 
       habitaciones =
         habitaciones.filter(
@@ -222,12 +225,13 @@ async function obtenerDisponibles(
             Number(
               h.precio_noche ??
               h.precio_base ??
+              h.tipoHabitacion?.precio_base ??
               0
             ) >= Number(precioMin)
         );
     }
 
-    if (precioMax) {
+    if (precioMax !== undefined) {
 
       habitaciones =
         habitaciones.filter(
@@ -235,6 +239,7 @@ async function obtenerDisponibles(
             Number(
               h.precio_noche ??
               h.precio_base ??
+              h.tipoHabitacion?.precio_base ??
               0
             ) <= Number(precioMax)
         );
@@ -253,33 +258,45 @@ async function obtenerDisponibles(
     }
 
     // ================= REVIEWS =================
-    const reviews =
-      await models.Valoracion.findAll({
-
-        where: {
-          hotel_id: hotel.id
-        }
-      });
-
     let rating = 0;
 
-    let totalReviews =
-      reviews.length;
+    let totalReviews = 0;
 
-    if (totalReviews > 0) {
+    try {
 
-      const sum =
-        reviews.reduce(
-          (acc, r) =>
-            acc + Number(r.puntuacion),
-          0
-        );
+      const reviews =
+        await models.Valoracion.findAll({
 
-      rating =
-        +(
-          sum /
-          totalReviews
-        ).toFixed(1);
+          where: {
+            hotel_id: hotel.id
+          }
+        });
+
+      totalReviews =
+        reviews.length;
+
+      if (totalReviews > 0) {
+
+        const sum =
+          reviews.reduce(
+            (acc, r) =>
+              acc + Number(r.puntuacion),
+            0
+          );
+
+        rating =
+          +(
+            sum /
+            totalReviews
+          ).toFixed(1);
+      }
+
+    } catch (reviewError) {
+
+      console.error(
+        'Error reviews:',
+        reviewError
+      );
     }
 
     // ================= SCORE =================
@@ -292,6 +309,7 @@ async function obtenerDisponibles(
           Number(
             h.precio_noche ??
             h.precio_base ??
+            h.tipoHabitacion?.precio_base ??
             0
           );
 
@@ -316,7 +334,7 @@ async function obtenerDisponibles(
           h.tipoHabitacion
             ?.nombre
             ?.toLowerCase()
-            .includes('suite')
+            ?.includes('suite')
         ) {
 
           score += 50;
@@ -328,7 +346,9 @@ async function obtenerDisponibles(
 
         return {
 
-          ...h.toJSON(),
+          ...(typeof h.toJSON === 'function'
+            ? h.toJSON()
+            : h),
 
           score,
 
@@ -346,11 +366,13 @@ async function obtenerDisponibles(
           (
             a.precio_noche ??
             a.precio_base ??
+            a.tipoHabitacion?.precio_base ??
             0
           ) -
           (
             b.precio_noche ??
             b.precio_base ??
+            b.tipoHabitacion?.precio_base ??
             0
           )
       );
@@ -364,11 +386,13 @@ async function obtenerDisponibles(
           (
             b.precio_noche ??
             b.precio_base ??
+            b.tipoHabitacion?.precio_base ??
             0
           ) -
           (
             a.precio_noche ??
             a.precio_base ??
+            a.tipoHabitacion?.precio_base ??
             0
           )
       );
@@ -545,35 +569,46 @@ async function obtenerPorId(
       });
     }
 
-    // ================= REVIEWS =================
-    const reviews =
-      await models.Valoracion.findAll({
-
-        where: {
-          hotel_id:
-            habitacion.hotel_id
-        }
-      });
-
     let rating = 0;
 
-    let totalReviews =
-      reviews.length;
+    let totalReviews = 0;
 
-    if (totalReviews > 0) {
+    try {
 
-      const sum =
-        reviews.reduce(
-          (acc, r) =>
-            acc + Number(r.puntuacion),
-          0
-        );
+      const reviews =
+        await models.Valoracion.findAll({
 
-      rating =
-        +(
-          sum /
-          totalReviews
-        ).toFixed(1);
+          where: {
+            hotel_id:
+              habitacion.hotel_id
+          }
+        });
+
+      totalReviews =
+        reviews.length;
+
+      if (totalReviews > 0) {
+
+        const sum =
+          reviews.reduce(
+            (acc, r) =>
+              acc + Number(r.puntuacion),
+            0
+          );
+
+        rating =
+          +(
+            sum /
+            totalReviews
+          ).toFixed(1);
+      }
+
+    } catch (reviewError) {
+
+      console.error(
+        'Error reviews detalle:',
+        reviewError
+      );
     }
 
     res.status(200).json({
@@ -582,7 +617,9 @@ async function obtenerPorId(
 
       data: {
 
-        ...habitacion.toJSON(),
+        ...(typeof habitacion.toJSON === 'function'
+          ? habitacion.toJSON()
+          : habitacion),
 
         rating,
 
