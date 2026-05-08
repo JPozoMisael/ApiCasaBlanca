@@ -159,6 +159,11 @@ async function obtenerDisponibles(
           hotel_id: hotel.id
         });
 
+    console.log(
+      'HABITACIONES ENCONTRADAS:',
+      habitaciones.length
+    );
+
     // ================= OCUPADAS =================
     if (usarDisponibilidad) {
 
@@ -217,7 +222,7 @@ async function obtenerDisponibles(
     }
 
     // ================= FILTROS =================
-    if (precioMin !== undefined) {
+    if (precioMin) {
 
       habitaciones =
         habitaciones.filter(
@@ -231,7 +236,7 @@ async function obtenerDisponibles(
         );
     }
 
-    if (precioMax !== undefined) {
+    if (precioMax) {
 
       habitaciones =
         habitaciones.filter(
@@ -291,11 +296,11 @@ async function obtenerDisponibles(
           ).toFixed(1);
       }
 
-    } catch (reviewError) {
+    } catch (err) {
 
       console.error(
-        'Error reviews:',
-        reviewError
+        'ERROR REVIEWS:',
+        err.message
       );
     }
 
@@ -363,13 +368,13 @@ async function obtenerDisponibles(
 
       habitaciones.sort(
         (a, b) =>
-          (
+          Number(
             a.precio_noche ??
             a.precio_base ??
             a.tipoHabitacion?.precio_base ??
             0
           ) -
-          (
+          Number(
             b.precio_noche ??
             b.precio_base ??
             b.tipoHabitacion?.precio_base ??
@@ -383,13 +388,13 @@ async function obtenerDisponibles(
 
       habitaciones.sort(
         (a, b) =>
-          (
+          Number(
             b.precio_noche ??
             b.precio_base ??
             b.tipoHabitacion?.precio_base ??
             0
           ) -
-          (
+          Number(
             a.precio_noche ??
             a.precio_base ??
             a.tipoHabitacion?.precio_base ??
@@ -461,7 +466,13 @@ async function obtenerDisponibles(
       error
     );
 
-    next(error);
+    res.status(500).json({
+
+      ok: false,
+
+      message:
+        'Error interno del servidor'
+    });
   }
 }
 
@@ -603,11 +614,11 @@ async function obtenerPorId(
           ).toFixed(1);
       }
 
-    } catch (reviewError) {
+    } catch (err) {
 
       console.error(
-        'Error reviews detalle:',
-        reviewError
+        'ERROR REVIEWS:',
+        err.message
       );
     }
 
@@ -772,7 +783,7 @@ async function crearReview(
 async function crear(
   req,
   res,
-  next
+ next
 ) {
 
   try {
