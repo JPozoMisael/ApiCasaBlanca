@@ -74,23 +74,14 @@ async function obtenerDisponibles(
     const {
 
       hotel: slug,
-
       checkIn,
-
       checkOut,
-
       adults,
-
       precioMin,
-
       precioMax,
-
       capacidad,
-
       sort,
-
       page = 1,
-
       limit = 10
 
     } = req.query;
@@ -112,6 +103,8 @@ async function obtenerDisponibles(
 
     let fechaSalida = null;
 
+    let usarDisponibilidad = false;
+
     if (checkIn && checkOut) {
 
       fechaEntrada =
@@ -119,6 +112,23 @@ async function obtenerDisponibles(
 
       fechaSalida =
         new Date(checkOut);
+      
+      const fechasValidas =
+      !isNaN(fechaEntrada.getTime()) &&
+      !isNaN(fechaSalida.getTime());
+
+      if(fechasValidas)  {
+        usarDisponibilidad = true; 
+         }
+      
+      if (fechaSalida <= fechaEntrada) {
+        return res.status(400).json({
+          ok: false,
+
+          message:
+            'checkOut debe ser mayor que checkIn'
+          });
+        }
     }
 
     // ================= HOTEL =================
@@ -147,10 +157,7 @@ async function obtenerDisponibles(
         });
 
     // ================= OCUPADAS =================
-    if (
-      fechaEntrada &&
-      fechaSalida
-    ) {
+    if (usarDisponibilidad) {
 
       const detallesOcupados =
         await models.DetalleReserva.findAll({
@@ -317,7 +324,7 @@ async function obtenerDisponibles(
 
         score += rating * 20;
 
-        score += Math.random() * 20;
+        score += h.id % 10;
 
         return {
 
@@ -379,10 +386,19 @@ async function obtenerDisponibles(
       habitaciones.length;
 
     const pageNum =
-      Number(page);
+      Math.max(
+        1,
+        Number(page) || 1
+      );
 
     const limitNum =
-      Number(limit);
+      Math.min(
+        50,
+        Math.max(
+          1,
+          Number(limit) || 10
+        )
+      );
 
     const start =
       (pageNum - 1) * limitNum;
@@ -652,13 +668,9 @@ async function crearReview(
   try {
 
     const {
-
       hotel_id,
-
       puntuacion,
-
       comentario
-
     } = req.body;
 
     if (
@@ -871,15 +883,12 @@ async function eliminar(
 }
 
 module.exports = {
-
   listar,
   obtenerDisponibles,
   obtenerPorHotel,
   obtenerPorId,
-
   obtenerReviews,
   crearReview,
-
   crear,
   actualizar,
   eliminar

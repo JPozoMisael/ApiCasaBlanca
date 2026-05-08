@@ -62,8 +62,8 @@ const Valoracion = sequelize.define(
 
       // REVIEW POR RESERVA
       {
-        name: 'idx_valoracion_reserva',
-
+        name: 'uq_valoracion_reserva',
+        unique: true,
         fields: ['reserva_id'],
       },
 
