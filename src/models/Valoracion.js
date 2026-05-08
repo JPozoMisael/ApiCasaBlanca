@@ -1,4 +1,5 @@
 const { DataTypes } = require('sequelize');
+
 const { sequelize } = require('../config/db');
 
 const Valoracion = sequelize.define(
@@ -10,53 +11,66 @@ const Valoracion = sequelize.define(
       autoIncrement: true,
     },
 
-    // RELACIÓN REAL
+    // ================= RESERVA =================
+    // TEMPORALMENTE OPCIONAL
+    // Para permitir reviews desde frontend
+    // sin flujo completo de reservas
     reserva_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
 
-    // CLAVE NUEVA (para frontend rápido)
+    // ================= HOTEL =================
     hotel_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
 
+    // ================= PUNTUACION =================
     puntuacion: {
       type: DataTypes.TINYINT,
       allowNull: false,
+
       validate: {
         min: 1,
         max: 10,
       },
     },
 
+    // ================= COMENTARIO =================
     comentario: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
 
+    // ================= FECHA =================
     fecha: {
       type: DataTypes.DATE,
       allowNull: false,
+
       defaultValue: DataTypes.NOW,
     },
   },
   {
     tableName: 'valoraciones',
+
     timestamps: true,
+
     underscored: true,
 
     indexes: [
+
+      // REVIEW POR RESERVA
       {
-        // 1 review por reserva
-        name: 'uq_valoracion_reserva',
-        unique: true,
+        name: 'idx_valoracion_reserva',
+
         fields: ['reserva_id'],
       },
+
+      // REVIEWS HOTEL
       {
-        // búsquedas rápidas por hotel
         name: 'idx_valoracion_hotel',
+
         fields: ['hotel_id'],
       },
     ],

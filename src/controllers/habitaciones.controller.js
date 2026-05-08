@@ -1,8 +1,15 @@
-const habitacionesService = require('../services/habitacion.service');
-const { Hotel, models } = require('../models');
-const { Op } = require('sequelize');
+const habitacionesService =
+  require('../services/habitacion.service');
 
-// ================= LISTAR =================
+const { Hotel, models } =
+  require('../models');
+
+const { Op } =
+  require('sequelize');
+
+// ======================================================
+// LISTAR
+// ======================================================
 async function listar(req, res, next) {
 
   try {
@@ -13,10 +20,12 @@ async function listar(req, res, next) {
         req.query.hotel_id
           ? Number(req.query.hotel_id)
           : undefined,
+
       tipo_habitacion_id:
         req.query.tipo_habitacion_id
           ? Number(req.query.tipo_habitacion_id)
           : undefined,
+
       estado:
         req.query.estado,
     };
@@ -24,24 +33,32 @@ async function listar(req, res, next) {
     const habitaciones =
       await habitacionesService
         .listarHabitaciones(filtros);
+
     res.status(200).json({
+
       ok: true,
+
       data: habitaciones,
+
       meta: {
         total: habitaciones.length,
       },
     });
 
   } catch (error) {
+
     console.error(
       'Error listar habitaciones:',
       error
     );
+
     next(error);
   }
 }
 
-// ================= DISPONIBLES =================
+// ======================================================
+// DISPONIBLES
+// ======================================================
 async function obtenerDisponibles(
   req,
   res,
@@ -49,20 +66,32 @@ async function obtenerDisponibles(
 ) {
 
   try {
+
     const {
+
       hotel: slug,
+
       checkIn,
+
       checkOut,
+
       adults,
+
       precioMin,
+
       precioMax,
+
       capacidad,
+
       sort,
+
       page = 1,
+
       limit = 10
 
     } = req.query;
 
+    // ================= VALIDACION =================
     if (
       !slug ||
       !checkIn ||
@@ -70,7 +99,9 @@ async function obtenerDisponibles(
     ) {
 
       return res.status(400).json({
+
         ok: false,
+
         message:
           'Parámetros incompletos'
       });
@@ -82,6 +113,7 @@ async function obtenerDisponibles(
     const fechaSalida =
       new Date(checkOut);
 
+    // ================= HOTEL =================
     const hotel =
       await Hotel.findOne({
         where: { slug }
@@ -90,15 +122,19 @@ async function obtenerDisponibles(
     if (!hotel) {
 
       return res.status(404).json({
+
         ok: false,
+
         message:
           'Hotel no encontrado'
       });
     }
 
+    // ================= HABITACIONES =================
     let habitaciones =
       await habitacionesService
         .listarHabitaciones({
+
           hotel_id: hotel.id
         });
 
@@ -113,21 +149,28 @@ async function obtenerDisponibles(
         include: [
           {
             model: models.Reserva,
+
             as: 'reserva',
+
             attributes: [],
+
             where: {
+
               estado: {
                 [Op.notIn]: [
                   'cancelada',
                   'no_show'
                 ]
               },
+
               [Op.and]: [
+
                 {
                   fecha_entrada: {
                     [Op.lt]: fechaSalida
                   }
                 },
+
                 {
                   fecha_salida: {
                     [Op.gt]: fechaEntrada
@@ -151,24 +194,33 @@ async function obtenerDisponibles(
 
     // ================= FILTROS =================
     if (precioMin) {
+
       habitaciones =
         habitaciones.filter(
           h =>
             Number(
-              h.precio_noche ?? 0
+              h.precio_noche ??
+              h.precio_base ??
+              0
             ) >= Number(precioMin)
         );
     }
+
     if (precioMax) {
+
       habitaciones =
         habitaciones.filter(
           h =>
             Number(
-              h.precio_noche ?? 0
+              h.precio_noche ??
+              h.precio_base ??
+              0
             ) <= Number(precioMax)
         );
     }
+
     if (capacidad) {
+
       habitaciones =
         habitaciones.filter(
           h =>
@@ -182,6 +234,7 @@ async function obtenerDisponibles(
     // ================= REVIEWS =================
     const reviews =
       await models.Valoracion.findAll({
+
         where: {
           hotel_id: hotel.id
         }
@@ -193,6 +246,7 @@ async function obtenerDisponibles(
       reviews.length;
 
     if (totalReviews > 0) {
+
       const sum =
         reviews.reduce(
           (acc, r) =>
@@ -215,13 +269,16 @@ async function obtenerDisponibles(
 
         const precio =
           Number(
-            h.precio_noche ?? 0
+            h.precio_noche ??
+            h.precio_base ??
+            0
           );
 
         score +=
           (1000 - precio);
 
         if (adults) {
+
           const diff =
             Math.abs(
               (
@@ -245,25 +302,35 @@ async function obtenerDisponibles(
         }
 
         score += rating * 20;
+
         score += Math.random() * 20;
 
         return {
+
           ...h.toJSON(),
+
           score,
+
           rating,
+
           totalReviews
         };
       });
 
     // ================= SORT =================
     if (sort === 'precio_asc') {
+
       habitaciones.sort(
         (a, b) =>
           (
-            a.precio_noche ?? 0
+            a.precio_noche ??
+            a.precio_base ??
+            0
           ) -
           (
-            b.precio_noche ?? 0
+            b.precio_noche ??
+            b.precio_base ??
+            0
           )
       );
 
@@ -274,10 +341,14 @@ async function obtenerDisponibles(
       habitaciones.sort(
         (a, b) =>
           (
-            b.precio_noche ?? 0
+            b.precio_noche ??
+            b.precio_base ??
+            0
           ) -
           (
-            a.precio_noche ?? 0
+            a.precio_noche ??
+            a.precio_base ??
+            0
           )
       );
 
@@ -308,13 +379,20 @@ async function obtenerDisponibles(
     const data =
       habitaciones.slice(start, end);
 
-    res.json({
+    res.status(200).json({
+
       ok: true,
+
       data,
+
       meta: {
+
         total,
+
         page: pageNum,
+
         limit: limitNum,
+
         pages:
           Math.ceil(
             total / limitNum
@@ -333,7 +411,9 @@ async function obtenerDisponibles(
   }
 }
 
-// ================= POR HOTEL =================
+// ======================================================
+// POR HOTEL
+// ======================================================
 async function obtenerPorHotel(
   req,
   res,
@@ -353,7 +433,9 @@ async function obtenerPorHotel(
     if (!hotel) {
 
       return res.status(404).json({
+
         ok: false,
+
         message:
           'Hotel no encontrado'
       });
@@ -367,11 +449,16 @@ async function obtenerPorHotel(
         });
 
     res.status(200).json({
+
       ok: true,
+
       data: habitaciones,
+
       meta: {
+
         hotel:
           hotel.nombre,
+
         total:
           habitaciones.length
       }
@@ -388,7 +475,9 @@ async function obtenerPorHotel(
   }
 }
 
-// ================= POR ID =================
+// ======================================================
+// POR ID
+// ======================================================
 async function obtenerPorId(
   req,
   res,
@@ -403,7 +492,9 @@ async function obtenerPorId(
     if (isNaN(id)) {
 
       return res.status(400).json({
+
         ok: false,
+
         message:
           'ID inválido',
       });
@@ -416,7 +507,9 @@ async function obtenerPorId(
     if (!habitacion) {
 
       return res.status(404).json({
+
         ok: false,
+
         message:
           'Habitación no encontrada',
       });
@@ -425,6 +518,7 @@ async function obtenerPorId(
     // ================= REVIEWS =================
     const reviews =
       await models.Valoracion.findAll({
+
         where: {
           hotel_id:
             habitacion.hotel_id
@@ -437,6 +531,7 @@ async function obtenerPorId(
       reviews.length;
 
     if (totalReviews > 0) {
+
       const sum =
         reviews.reduce(
           (acc, r) =>
@@ -452,24 +547,33 @@ async function obtenerPorId(
     }
 
     res.status(200).json({
+
       ok: true,
+
       data: {
+
         ...habitacion.toJSON(),
+
         rating,
+
         totalReviews
       }
     });
 
   } catch (error) {
+
     console.error(
       'Error obtener habitación:',
       error
     );
+
     next(error);
   }
 }
 
-// ================= REVIEWS =================
+// ======================================================
+// REVIEWS
+// ======================================================
 async function obtenerReviews(
   req,
   res,
@@ -477,13 +581,16 @@ async function obtenerReviews(
 ) {
 
   try {
+
     const hotelId =
       Number(req.params.hotelId);
 
     if (isNaN(hotelId)) {
 
       return res.status(400).json({
+
         ok: false,
+
         message:
           'hotelId inválido'
       });
@@ -501,12 +608,15 @@ async function obtenerReviews(
         ]
       });
 
-    res.json({
+    res.status(200).json({
+
       ok: true,
+
       data: reviews
     });
 
   } catch (error) {
+
     console.error(
       'Error reviews:',
       error
@@ -516,7 +626,9 @@ async function obtenerReviews(
   }
 }
 
-// ================= CREAR REVIEW =================
+// ======================================================
+// CREAR REVIEW
+// ======================================================
 async function crearReview(
   req,
   res,
@@ -526,19 +638,25 @@ async function crearReview(
   try {
 
     const {
+
       hotel_id,
+
       puntuacion,
+
       comentario
 
     } = req.body;
 
+    // ================= VALIDACION =================
     if (
       !hotel_id ||
       !puntuacion
     ) {
 
       return res.status(400).json({
+
         ok: false,
+
         message:
           'hotel_id y puntuacion son obligatorios'
       });
@@ -550,7 +668,9 @@ async function crearReview(
     ) {
 
       return res.status(400).json({
+
         ok: false,
+
         message:
           'puntuacion debe estar entre 1 y 10'
       });
@@ -558,13 +678,18 @@ async function crearReview(
 
     const review =
       await models.Valoracion.create({
+
         hotel_id,
+
         puntuacion,
+
         comentario
       });
 
     res.status(201).json({
+
       ok: true,
+
       data: review
     });
 
@@ -579,11 +704,175 @@ async function crearReview(
   }
 }
 
+// ======================================================
+// CREAR
+// ======================================================
+async function crear(
+  req,
+  res,
+  next
+) {
+
+  try {
+
+    const habitacion =
+      await habitacionesService
+        .crearHabitacion(req.body);
+
+    res.status(201).json({
+
+      ok: true,
+
+      data: habitacion
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Error crear habitación:',
+      error
+    );
+
+    next(error);
+  }
+}
+
+// ======================================================
+// ACTUALIZAR
+// ======================================================
+async function actualizar(
+  req,
+  res,
+  next
+) {
+
+  try {
+
+    const id =
+      Number(req.params.id);
+
+    if (isNaN(id)) {
+
+      return res.status(400).json({
+
+        ok: false,
+
+        message:
+          'ID inválido'
+      });
+    }
+
+    const habitacion =
+      await habitacionesService
+        .actualizarHabitacion(
+          id,
+          req.body
+        );
+
+    if (!habitacion) {
+
+      return res.status(404).json({
+
+        ok: false,
+
+        message:
+          'Habitación no encontrada'
+      });
+    }
+
+    res.status(200).json({
+
+      ok: true,
+
+      data: habitacion
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Error actualizar habitación:',
+      error
+    );
+
+    next(error);
+  }
+}
+
+// ======================================================
+// ELIMINAR
+// ======================================================
+async function eliminar(
+  req,
+  res,
+  next
+) {
+
+  try {
+
+    const id =
+      Number(req.params.id);
+
+    if (isNaN(id)) {
+
+      return res.status(400).json({
+
+        ok: false,
+
+        message:
+          'ID inválido'
+      });
+    }
+
+    const okDelete =
+      await habitacionesService
+        .eliminarHabitacion(id);
+
+    if (!okDelete) {
+
+      return res.status(404).json({
+
+        ok: false,
+
+        message:
+          'Habitación no encontrada'
+      });
+    }
+
+    res.status(200).json({
+
+      ok: true,
+
+      message:
+        'Habitación eliminada correctamente'
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Error eliminar habitación:',
+      error
+    );
+
+    next(error);
+  }
+}
+
 module.exports = {
+
+  // CRUD
   listar,
-  obtenerDisponibles,
-  obtenerPorHotel,
   obtenerPorId,
+  crear,
+  actualizar,
+  eliminar,
+
+  // HOTEL
+  obtenerPorHotel,
+
+  // DISPONIBLES
+  obtenerDisponibles,
+
+  // REVIEWS
   obtenerReviews,
   crearReview
 };
