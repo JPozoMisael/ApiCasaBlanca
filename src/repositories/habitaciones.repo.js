@@ -1,20 +1,33 @@
 const { models } = require('../models');
 
-const listar = (filtros = {}) => {
+// ======================================================
+// LISTAR
+// ======================================================
+const listar = (
+  filtros = {}
+) => {
 
   const where = {};
 
+  // ================= FILTROS =================
   if (filtros.hotel_id) {
-    where.hotel_id = filtros.hotel_id;
+
+    where.hotel_id =
+      filtros.hotel_id;
   }
 
-  if (filtros.tipo_habitacion_id) {
+  if (
+    filtros.tipo_habitacion_id
+  ) {
+
     where.tipo_habitacion_id =
       filtros.tipo_habitacion_id;
   }
 
   if (filtros.estado) {
-    where.estado = filtros.estado;
+
+    where.estado =
+      filtros.estado;
   }
 
   return models.Habitacion.findAll({
@@ -23,19 +36,30 @@ const listar = (filtros = {}) => {
 
     include: [
       {
-        model: models.TipoHabitacion,
+        model:
+          models.TipoHabitacion,
 
         as: 'tipoHabitacion',
 
+        // 🔥 IMPORTANTE:
+        // NO incluir precio_base
+        // porque NO existe en la BD
         attributes: [
+
           'id',
+
           'nombre',
+
           'descripcion',
+
           'capacidad_maxima',
-          'precio_base',
+
           'camas_sencillas',
+
           'camas_dobles',
+
           'tiene_vista',
+
           'tiene_balcon'
         ]
       }
@@ -47,25 +71,40 @@ const listar = (filtros = {}) => {
   });
 };
 
-const obtenerPorId = (id) => {
+// ======================================================
+// OBTENER POR ID
+// ======================================================
+const obtenerPorId = (
+  id
+) => {
 
   return models.Habitacion.findByPk(id, {
 
     include: [
       {
-        model: models.TipoHabitacion,
+        model:
+          models.TipoHabitacion,
 
         as: 'tipoHabitacion',
 
+        // 🔥 IMPORTANTE:
+        // NO incluir precio_base
         attributes: [
+
           'id',
+
           'nombre',
+
           'descripcion',
+
           'capacidad_maxima',
-          'precio_base',
+
           'camas_sencillas',
+
           'camas_dobles',
+
           'tiene_vista',
+
           'tiene_balcon'
         ]
       }
@@ -73,9 +112,21 @@ const obtenerPorId = (id) => {
   });
 };
 
-const crear = (data) =>
-  models.Habitacion.create(data);
+// ======================================================
+// CREAR
+// ======================================================
+const crear = (
+  data
+) => {
 
+  return models.Habitacion.create(
+    data
+  );
+};
+
+// ======================================================
+// ACTUALIZAR
+// ======================================================
 const actualizar = async (
   id,
   data
@@ -85,18 +136,25 @@ const actualizar = async (
     await models.Habitacion.findByPk(id);
 
   if (!hab) {
+
     return null;
   }
 
   return hab.update(data);
 };
 
-const eliminar = async (id) => {
+// ======================================================
+// ELIMINAR
+// ======================================================
+const eliminar = async (
+  id
+) => {
 
   const hab =
     await models.Habitacion.findByPk(id);
 
   if (!hab) {
+
     return false;
   }
 
