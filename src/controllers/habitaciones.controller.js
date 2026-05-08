@@ -10,7 +10,11 @@ const { Op } =
 // ======================================================
 // LISTAR
 // ======================================================
-async function listar(req, res, next) {
+async function listar(
+  req,
+  res,
+  next
+) {
 
   try {
 
@@ -92,26 +96,30 @@ async function obtenerDisponibles(
     } = req.query;
 
     // ================= VALIDACION =================
-    if (
-      !slug ||
-      !checkIn ||
-      !checkOut
-    ) {
+    if (!slug) {
 
       return res.status(400).json({
 
         ok: false,
 
         message:
-          'Parámetros incompletos'
+          'Hotel requerido'
       });
     }
 
-    const fechaEntrada =
-      new Date(checkIn);
+    // ================= FECHAS =================
+    let fechaEntrada = null;
 
-    const fechaSalida =
-      new Date(checkOut);
+    let fechaSalida = null;
+
+    if (checkIn && checkOut) {
+
+      fechaEntrada =
+        new Date(checkIn);
+
+      fechaSalida =
+        new Date(checkOut);
+    }
 
     // ================= HOTEL =================
     const hotel =
@@ -139,58 +147,64 @@ async function obtenerDisponibles(
         });
 
     // ================= OCUPADAS =================
-    const detallesOcupados =
-      await models.DetalleReserva.findAll({
+    if (
+      fechaEntrada &&
+      fechaSalida
+    ) {
 
-        attributes: [
-          'habitacion_id'
-        ],
+      const detallesOcupados =
+        await models.DetalleReserva.findAll({
 
-        include: [
-          {
-            model: models.Reserva,
+          attributes: [
+            'habitacion_id'
+          ],
 
-            as: 'reserva',
+          include: [
+            {
+              model: models.Reserva,
 
-            attributes: [],
+              as: 'reserva',
 
-            where: {
+              attributes: [],
 
-              estado: {
-                [Op.notIn]: [
-                  'cancelada',
-                  'no_show'
-                ]
-              },
+              where: {
 
-              [Op.and]: [
-
-                {
-                  fecha_entrada: {
-                    [Op.lt]: fechaSalida
-                  }
+                estado: {
+                  [Op.notIn]: [
+                    'cancelada',
+                    'no_show'
+                  ]
                 },
 
-                {
-                  fecha_salida: {
-                    [Op.gt]: fechaEntrada
+                [Op.and]: [
+
+                  {
+                    fecha_entrada: {
+                      [Op.lt]: fechaSalida
+                    }
+                  },
+
+                  {
+                    fecha_salida: {
+                      [Op.gt]: fechaEntrada
+                    }
                   }
-                }
-              ]
+                ]
+              }
             }
-          }
-        ]
-      });
+          ]
+        });
 
-    const ocupadas =
-      detallesOcupados.map(
-        d => d.habitacion_id
-      );
+      const ocupadas =
+        detallesOcupados.map(
+          d => d.habitacion_id
+        );
 
-    habitaciones =
-      habitaciones.filter(
-        h => !ocupadas.includes(h.id)
-      );
+      habitaciones =
+        habitaciones.filter(
+          h => !ocupadas.includes(h.id)
+        );
+    }
 
     // ================= FILTROS =================
     if (precioMin) {
@@ -647,7 +661,6 @@ async function crearReview(
 
     } = req.body;
 
-    // ================= VALIDACION =================
     if (
       !hotel_id ||
       !puntuacion
@@ -859,20 +872,15 @@ async function eliminar(
 
 module.exports = {
 
-  // CRUD
   listar,
+  obtenerDisponibles,
+  obtenerPorHotel,
   obtenerPorId,
+
+  obtenerReviews,
+  crearReview,
+
   crear,
   actualizar,
-  eliminar,
-
-  // HOTEL
-  obtenerPorHotel,
-
-  // DISPONIBLES
-  obtenerDisponibles,
-
-  // REVIEWS
-  obtenerReviews,
-  crearReview
+  eliminar
 };
