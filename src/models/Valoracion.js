@@ -53,11 +53,8 @@ const Valoracion = sequelize.define(
   },
   {
     tableName: 'valoraciones',
-
     timestamps: true,
-
     underscored: true,
-
     indexes: [
 
       // REVIEW POR RESERVA

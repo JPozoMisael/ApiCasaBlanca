@@ -41,25 +41,14 @@ const listar = (
 
         as: 'tipoHabitacion',
 
-        // 🔥 IMPORTANTE:
-        // NO incluir precio_base
-        // porque NO existe en la BD
         attributes: [
-
           'id',
-
           'nombre',
-
           'descripcion',
-
           'capacidad_maxima',
-
           'camas_sencillas',
-
           'camas_dobles',
-
           'tiene_vista',
-
           'tiene_balcon'
         ]
       }
@@ -86,25 +75,14 @@ const obtenerPorId = (
           models.TipoHabitacion,
 
         as: 'tipoHabitacion',
-
-        // 🔥 IMPORTANTE:
-        // NO incluir precio_base
         attributes: [
-
           'id',
-
           'nombre',
-
           'descripcion',
-
           'capacidad_maxima',
-
           'camas_sencillas',
-
           'camas_dobles',
-
           'tiene_vista',
-
           'tiene_balcon'
         ]
       }

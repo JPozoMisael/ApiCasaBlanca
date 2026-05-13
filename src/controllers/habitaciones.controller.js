@@ -177,13 +177,9 @@ async function obtenerDisponibles(
           include: [
             {
               model: models.Reserva,
-
               as: 'reserva',
-
               attributes: [],
-
               where: {
-
                 estado: {
                   [Op.notIn]: [
                     'cancelada',
