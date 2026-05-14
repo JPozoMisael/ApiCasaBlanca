@@ -925,6 +925,33 @@ async function eliminar(
     next(error);
   }
 }
+/* ================= DESTACADO ================= */
+
+async function destacado(req, res, next) {
+
+  try {
+
+    const hotel =
+      await hotelesService
+        .obtenerHotelDestacado();
+
+    res.status(200).json({
+
+      ok: true,
+
+      data: hotel
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Error hotel destacado:',
+      error.message
+    );
+
+    next(error);
+  }
+}
 
 module.exports = {
   listar,
@@ -935,5 +962,6 @@ module.exports = {
   crearReview,
   crear,
   actualizar,
-  eliminar
+  eliminar,
+  destacado
 };
