@@ -47,8 +47,12 @@ router.get(
   controller.listar
 );
 
+router.get(
+  '/featured',
+  controller.destacadas
+);
 // DETALLE
-// 🔥 SIEMPRE AL FINAL
+// SIEMPRE AL FINAL
 router.get(
   '/:id',
   controller.obtenerPorId

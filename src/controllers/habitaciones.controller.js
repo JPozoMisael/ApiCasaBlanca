@@ -952,7 +952,40 @@ async function destacado(req, res, next) {
     next(error);
   }
 }
+/* ======================================================
+   DESTACADAS
+====================================================== */
 
+async function destacadas(
+  req,
+  res,
+  next
+) {
+
+  try {
+
+    const data =
+      await habitacionesService
+        .obtenerHabitacionesDestacadas();
+
+    res.status(200).json({
+
+      ok: true,
+
+      data
+
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Error habitaciones destacadas:',
+      error
+    );
+
+    next(error);
+  }
+}
 module.exports = {
   listar,
   obtenerDisponibles,
@@ -963,5 +996,6 @@ module.exports = {
   crear,
   actualizar,
   eliminar,
-  destacado
+  destacado,
+  destacadas
 };
