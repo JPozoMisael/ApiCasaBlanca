@@ -23,7 +23,7 @@ async function login({ email, password }) {
     throw err;
   }
 
-  if (!user.esta_activo) {
+  if (!user.estado !== 'activo') {
     const err = new Error('Usuario inactivo');
     err.statusCode = 403;
     throw err;
@@ -50,4 +50,46 @@ async function login({ email, password }) {
   return { token, usuario: usuarioSeguro };
 }
 
-module.exports = { login };
+async function register(data) {
+
+  const {
+    hotel_id,
+    nombre,
+    apellido,
+    email,
+    password,
+    rol
+  } = data;
+
+  if (!nombre || !apellido || !email || !password) {
+    const err = new Error('Datos incompletos');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const emailNorm = String(email).trim().toLowerCase();
+
+  const existe = await models.User.findOne({
+    where: { email: emailNorm }
+  });
+
+  if (existe) {
+    const err = new Error('El usuario ya existe');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const nuevoUsuario = await models.User.create({
+    hotel_id: hotel_id || null,
+    nombre,
+    apellido,
+    email: emailNorm,
+    password,
+    rol: rol || 'empleado',
+    estado: 'activo'
+  });
+
+  return nuevoUsuario;
+}
+
+module.exports = { login, register };

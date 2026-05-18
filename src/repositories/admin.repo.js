@@ -1,20 +1,139 @@
 const { models } = require('../models');
 
-const listarUsuarios = () =>
-  models.User.findAll({
-    attributes: { exclude: ['password'] },
+
+// =========================================
+// LISTAR USUARIOS
+// =========================================
+
+const listarUsuarios = () => {
+
+  return models.User.findAll({
+
+    attributes: {
+      exclude: ['password'],
+    },
+
     order: [['id', 'DESC']],
   });
-
-const obtenerUsuarioPorId = (id) =>
-  models.User.findByPk(id, { attributes: { exclude: ['password'] } });
-
-const crearUsuario = (data) => models.User.create(data);
-
-const cambiarRol = async (id, rol) => {
-  const u = await models.User.findByPk(id);
-  if (!u) return null;
-  return u.update({ rol });
 };
 
-module.exports = { listarUsuarios, obtenerUsuarioPorId, crearUsuario, cambiarRol };
+
+// =========================================
+// OBTENER USUARIO POR ID
+// =========================================
+
+const obtenerUsuarioPorId = (id) => {
+
+  return models.User.findByPk(id, {
+
+    attributes: {
+      exclude: ['password'],
+    },
+  });
+};
+
+
+// =========================================
+// OBTENER USUARIO POR EMAIL
+// =========================================
+
+const obtenerUsuarioPorEmail = (email) => {
+
+  return models.User.findOne({
+
+    where: { email },
+  });
+};
+
+
+// =========================================
+// CREAR USUARIO
+// =========================================
+
+const crearUsuario = (data) => {
+
+  return models.User.create(data);
+};
+
+
+// =========================================
+// CAMBIAR ROL
+// =========================================
+
+const cambiarRol = async (
+  id,
+  rol
+) => {
+
+  const usuario =
+    await models.User.findByPk(id);
+
+
+  if (!usuario) {
+    return null;
+  }
+
+
+  await usuario.update({ rol });
+
+
+  return usuario;
+};
+
+
+// =========================================
+// CAMBIAR ESTADO
+// =========================================
+
+const cambiarEstado = async (
+  id,
+  estado
+) => {
+
+  const usuario =
+    await models.User.findByPk(id);
+
+
+  if (!usuario) {
+    return null;
+  }
+
+
+  await usuario.update({ estado });
+
+
+  return usuario;
+};
+
+
+// =========================================
+// ELIMINAR USUARIO
+// =========================================
+
+const eliminarUsuario = async (id) => {
+
+  const usuario =
+    await models.User.findByPk(id);
+
+
+  if (!usuario) {
+    return null;
+  }
+
+
+  await usuario.destroy();
+
+
+  return true;
+};
+
+
+module.exports = {
+  listarUsuarios,
+  obtenerUsuarioPorId,
+  obtenerUsuarioPorEmail,
+  crearUsuario,
+  cambiarRol,
+  cambiarEstado,
+  eliminarUsuario,
+};

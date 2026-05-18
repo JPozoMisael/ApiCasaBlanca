@@ -39,6 +39,12 @@ const User = sequelize.define(
       validate: {
         isEmail: true,
       },
+      set(value) {
+        this.setDataValue(
+          'email',
+          String(value).trim().toLowerCase()
+        );
+      },
     },
 
     password: {
@@ -47,13 +53,21 @@ const User = sequelize.define(
     },
 
     rol: {
-      type: DataTypes.ENUM('admin', 'recepcion', 'supervisor', 'empleado'),
+      type: DataTypes.ENUM(
+        'super_admin',
+        'admin',
+        'recepcion',
+        'cliente'
+      ),
       allowNull: false,
-      defaultValue: 'empleado',
+      defaultValue: 'cliente',
     },
 
     estado: {
-      type: DataTypes.ENUM('activo', 'inactivo'),
+      type: DataTypes.ENUM(
+        'activo',
+        'inactivo'
+      ),
       allowNull: false,
       defaultValue: 'activo',
     },
@@ -65,25 +79,46 @@ const User = sequelize.define(
   },
   {
     tableName: 'users',
+
     timestamps: true,
+
     underscored: true,
+
     hooks: {
+
       beforeCreate: async (user) => {
+
         if (user.password) {
+
           const salt = await bcrypt.genSalt(10);
-          user.password = await bcrypt.hash(user.password, salt);
+
+          user.password = await bcrypt.hash(
+            user.password,
+            salt
+          );
         }
       },
+
       beforeUpdate: async (user) => {
+
         if (user.changed('password')) {
+
           const salt = await bcrypt.genSalt(10);
-          user.password = await bcrypt.hash(user.password, salt);
+
+          user.password = await bcrypt.hash(
+            user.password,
+            salt
+          );
         }
       },
     },
+
     defaultScope: {
-      attributes: { exclude: ['password'] },
+      attributes: {
+        exclude: ['password'],
+      },
     },
+
     scopes: {
       withPassword: {
         attributes: {},
@@ -92,8 +127,18 @@ const User = sequelize.define(
   }
 );
 
+
+// =========================================
+// MÉTODOS
+// =========================================
+
 User.prototype.comparePassword = async function (password) {
-  return bcrypt.compare(password, this.password);
+
+  return bcrypt.compare(
+    password,
+    this.password
+  );
 };
+
 
 module.exports = User;

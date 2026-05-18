@@ -1,26 +1,79 @@
-module.exports = (...rolesPermitidos) => {
-  return (req, res, next) => {
-    const rol = req.user?.rol;
+function permitirRoles(...rolesPermitidos) {
 
-    if (!rol) {
+  return (req, res, next) => {
+
+    // =====================================
+    // VALIDAR USUARIO AUTENTICADO
+    // =====================================
+
+    if (!req.user) {
+
       return res.status(401).json({
         ok: false,
-        message: 'No autorizado',
+        message: 'No autenticado',
       });
     }
 
-    //  Mejora: normalización de rol (evita bugs tipo "Admin" vs "admin")
-    const rolNormalizado = String(rol).toLowerCase();
 
-    const rolesValidos = rolesPermitidos.map(r => String(r).toLowerCase());
+    // =====================================
+    // OBTENER ROL
+    // =====================================
 
-    if (!rolesValidos.includes(rolNormalizado)) {
+    const rolUsuario = String(
+      req.user.rol || ''
+    )
+      .trim()
+      .toLowerCase();
+
+
+    // =====================================
+    // VALIDAR QUE EXISTA ROL
+    // =====================================
+
+    if (!rolUsuario) {
+
+      return res.status(401).json({
+        ok: false,
+        message: 'Rol no definido',
+      });
+    }
+
+
+    // =====================================
+    // NORMALIZAR ROLES PERMITIDOS
+    // =====================================
+
+    const rolesValidos =
+      rolesPermitidos.map((rol) =>
+        String(rol)
+          .trim()
+          .toLowerCase()
+      );
+
+
+    // =====================================
+    // VALIDAR ACCESO
+    // =====================================
+
+    if (!rolesValidos.includes(rolUsuario)) {
+
       return res.status(403).json({
         ok: false,
-        message: 'Acceso denegado: rol insuficiente',
+        message:
+          'Acceso denegado: permisos insuficientes',
       });
     }
+
+
+    // =====================================
+    // CONTINUAR
+    // =====================================
 
     next();
   };
+}
+
+
+module.exports = {
+  permitirRoles,
 };

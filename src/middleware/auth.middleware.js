@@ -1,33 +1,101 @@
-const { extraerBearerToken, verificarToken } = require('../utils/tokens');
+const {
+  extraerBearerToken,
+  verificarToken,
+} = require('../utils/tokens');
 
-module.exports = function auth(req, res, next) {
+
+// =========================================
+// AUTH MIDDLEWARE
+// =========================================
+
+module.exports = function auth(
+  req,
+  res,
+  next
+) {
+
   try {
-    const token = extraerBearerToken(req.headers.authorization || '');
+
+    // =====================================
+    // EXTRAER TOKEN
+    // =====================================
+
+    const authHeader =
+      req.headers.authorization || '';
+
+    const token =
+      extraerBearerToken(authHeader);
+
+
+    // =====================================
+    // VALIDAR TOKEN EXISTENTE
+    // =====================================
 
     if (!token) {
+
       return res.status(401).json({
         ok: false,
-        message: 'No autorizado: token faltante',
+        message:
+          'No autorizado: token faltante',
       });
     }
 
-    const payload = verificarToken(token);
 
-    //  Validación fuerte
-    if (!payload?.id || !payload?.rol) {
+    // =====================================
+    // VERIFICAR JWT
+    // =====================================
+
+    const payload =
+      verificarToken(token);
+
+
+    // =====================================
+    // VALIDAR PAYLOAD
+    // =====================================
+
+    if (
+      !payload ||
+      !payload.id ||
+      !payload.rol
+    ) {
+
       return res.status(401).json({
         ok: false,
         message: 'Token inválido',
       });
     }
 
-    req.user = payload;
+
+    // =====================================
+    // NORMALIZAR USER
+    // =====================================
+
+    req.user = {
+      id: Number(payload.id),
+
+      rol: String(payload.rol)
+        .trim()
+        .toLowerCase(),
+    };
+
+
+    // =====================================
+    // CONTINUAR
+    // =====================================
 
     next();
-  } catch (err) {
+
+  } catch (error) {
+
+    console.error(
+      'Error auth middleware:',
+      error.message
+    );
+
     return res.status(401).json({
       ok: false,
-      message: 'No autorizado: token inválido o expirado',
+      message:
+        'No autorizado: token inválido o expirado',
     });
   }
 };

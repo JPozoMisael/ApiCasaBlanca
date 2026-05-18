@@ -29,6 +29,24 @@ async function login(req, res, next) {
   }
 }
 
+async function register(req, res, next) {
+  try {
+
+    const usuario = await authService.register(req.body);
+
+    return res.status(201).json({
+      ok: true,
+      message: 'Usuario registrado exitosamente',
+      data: usuario
+    });
+
+  } catch (error) {
+    console.error('Error en register:', error.message);
+    next(error);
+  }
+}
+
 module.exports = {
   login,
+  register
 };
