@@ -1,54 +1,156 @@
 const { models } = require('../models');
-const { generarToken } = require('../utils/tokens');
 
-async function login({ email, password }) {
+const {
+  generarToken
+} = require('../utils/tokens');
+
+
+// =========================================
+// LOGIN
+// =========================================
+
+async function login({
+  email,
+  password
+}) {
+
+  // =====================================
+  // VALIDAR DATOS
+  // =====================================
+
   if (!email || !password) {
-    const err = new Error('Email y password son requeridos');
+
+    const err = new Error(
+      'Email y password son requeridos'
+    );
+
     err.statusCode = 400;
+
     throw err;
   }
 
-  // Normalizar email
-  const emailNorm = String(email).trim().toLowerCase();
 
-  // OJO: User tiene defaultScope sin password, por eso usamos withPassword
-  const user = await models.User.scope('withPassword').findOne({
-    where: { email: emailNorm },
+  // =====================================
+  // NORMALIZAR EMAIL
+  // =====================================
+
+  const emailNorm = String(email)
+    .trim()
+    .toLowerCase();
+
+
+  // =====================================
+  // BUSCAR USUARIO
+  // =====================================
+
+  const user =
+    await models.User
+      .scope('withPassword')
+      .findOne({
+        where: {
+          email: emailNorm
+        },
+      });
+
+
+  // =====================================
+  // VALIDAR USUARIO
+  // =====================================
+
+  if (!user) {
+
+    const err = new Error(
+      'Credenciales inválidas'
+    );
+
+    err.statusCode = 401;
+
+    throw err;
+  }
+
+
+  // =====================================
+  // VALIDAR ESTADO
+  // =====================================
+
+  if (user.estado !== 'activo') {
+
+    const err = new Error(
+      'Usuario inactivo'
+    );
+
+    err.statusCode = 403;
+
+    throw err;
+  }
+
+
+  // =====================================
+  // VALIDAR PASSWORD
+  // =====================================
+
+  const valido =
+    await user.comparePassword(
+      password
+    );
+
+
+  if (!valido) {
+
+    const err = new Error(
+      'Credenciales inválidas'
+    );
+
+    err.statusCode = 401;
+
+    throw err;
+  }
+
+
+  // =====================================
+  // ACTUALIZAR ÚLTIMO LOGIN
+  // =====================================
+
+  await user.update({
+    ultimo_login: new Date()
   });
 
-  // Evita dar pistas si existe o no existe
-  if (!user) {
-    const err = new Error('Credenciales inválidas');
-    err.statusCode = 401;
-    throw err;
-  }
 
-  if (!user.estado !== 'activo') {
-    const err = new Error('Usuario inactivo');
-    err.statusCode = 403;
-    throw err;
-  }
+  // =====================================
+  // GENERAR TOKEN
+  // =====================================
 
-  const valido = await user.comparePassword(password);
-  if (!valido) {
-    const err = new Error('Credenciales inválidas');
-    err.statusCode = 401;
-    throw err;
-  }
-
-  await user.update({ ultimo_login: new Date() });
-
-  // Generar token desde utils/tokens.js
   const token = generarToken(
-    { id: user.id, rol: user.rol },
+
+    {
+      id: user.id,
+      rol: user.rol
+    },
+
     process.env.JWT_EXPIRE || '8h'
   );
 
-  // Retornar usuario seguro (defaultScope excluye password)
-  const usuarioSeguro = await models.User.findByPk(user.id);
 
-  return { token, usuario: usuarioSeguro };
+  // =====================================
+  // RETORNAR USUARIO SEGURO
+  // =====================================
+
+  const usuarioSeguro =
+    await models.User.findByPk(
+      user.id
+    );
+
+
+  return {
+    token,
+    usuario: usuarioSeguro
+  };
 }
+
+
+// =========================================
+// REGISTER
+// =========================================
 
 async function register(data) {
 
@@ -61,35 +163,108 @@ async function register(data) {
     rol
   } = data;
 
-  if (!nombre || !apellido || !email || !password) {
-    const err = new Error('Datos incompletos');
+
+  // =====================================
+  // VALIDAR DATOS
+  // =====================================
+
+  if (
+    !nombre ||
+    !apellido ||
+    !email ||
+    !password
+  ) {
+
+    const err = new Error(
+      'Datos incompletos'
+    );
+
     err.statusCode = 400;
+
     throw err;
   }
 
-  const emailNorm = String(email).trim().toLowerCase();
 
-  const existe = await models.User.findOne({
-    where: { email: emailNorm }
-  });
+  // =====================================
+  // NORMALIZAR EMAIL
+  // =====================================
+
+  const emailNorm = String(email)
+    .trim()
+    .toLowerCase();
+
+
+  // =====================================
+  // VALIDAR EMAIL EXISTENTE
+  // =====================================
+
+  const existe =
+    await models.User.findOne({
+      where: {
+        email: emailNorm
+      }
+    });
+
 
   if (existe) {
-    const err = new Error('El usuario ya existe');
+
+    const err = new Error(
+      'El usuario ya existe'
+    );
+
     err.statusCode = 409;
+
     throw err;
   }
 
-  const nuevoUsuario = await models.User.create({
-    hotel_id: hotel_id || null,
-    nombre,
-    apellido,
-    email: emailNorm,
-    password,
-    rol: rol || 'empleado',
-    estado: 'activo'
-  });
+
+  // =====================================
+  // ROLES VÁLIDOS
+  // =====================================
+
+  const rolesValidos = [
+    'super_admin',
+    'admin',
+    'recepcion',
+    'cliente'
+  ];
+
+
+  const rolFinal =
+    rolesValidos.includes(rol)
+      ? rol
+      : 'cliente';
+
+
+  // =====================================
+  // CREAR USUARIO
+  // =====================================
+
+  const nuevoUsuario =
+    await models.User.create({
+
+      hotel_id:
+        hotel_id || null,
+
+      nombre,
+
+      apellido,
+
+      email: emailNorm,
+
+      password,
+
+      rol: rolFinal,
+
+      estado: 'activo'
+    });
+
 
   return nuevoUsuario;
 }
 
-module.exports = { login, register };
+
+module.exports = {
+  login,
+  register
+};
