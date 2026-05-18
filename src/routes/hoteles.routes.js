@@ -8,8 +8,9 @@ const controller =
 const auth =
   require('../middleware/auth.middleware');
 
-const roles =
-  require('../middleware/roles.middleware');
+const {
+  permitirRoles
+} = require('../middleware/roles.middleware');
 
 const validate =
   require('../middleware/validate.middleware');
@@ -19,9 +20,11 @@ const {
   actualizarHotelSchema
 } = require('../validators/hotel.schema');
 
-/* ======================================================
-   PUBLIC
-====================================================== */
+
+// ======================================================
+// PUBLIC
+// ======================================================
+
 
 // 🔥 BOOKING HOME
 router.get(
@@ -29,11 +32,13 @@ router.get(
   controller.destacado
 );
 
+
 // 🔥 RESUMEN HOTELES
 router.get(
   '/resumen',
   controller.resumen
 );
+
 
 // 🔥 POR SLUG
 router.get(
@@ -41,11 +46,13 @@ router.get(
   controller.obtenerPorSlug
 );
 
+
 // 🔥 LISTAR
 router.get(
   '/',
   controller.listar
 );
+
 
 // 🔥 POR ID
 router.get(
@@ -53,34 +60,64 @@ router.get(
   controller.obtenerPorId
 );
 
-/* ======================================================
-   PROTEGIDO
-====================================================== */
 
-// CREAR
+// ======================================================
+// PROTEGIDO
+// ======================================================
+
+
+// =========================================
+// CREAR HOTEL
+// =========================================
+
 router.post(
   '/',
   auth,
-  roles('admin'),
+
+  permitirRoles(
+    'super_admin',
+    'admin'
+  ),
+
   validate(crearHotelSchema),
+
   controller.crear
 );
 
-// ACTUALIZAR
+
+// =========================================
+// ACTUALIZAR HOTEL
+// =========================================
+
 router.put(
   '/:id',
   auth,
-  roles('admin'),
+
+  permitirRoles(
+    'super_admin',
+    'admin'
+  ),
+
   validate(actualizarHotelSchema),
+
   controller.actualizar
 );
 
-// ELIMINAR
+
+// =========================================
+// ELIMINAR HOTEL
+// =========================================
+
 router.delete(
   '/:id',
   auth,
-  roles('admin'),
+
+  permitirRoles(
+    'super_admin'
+  ),
+
   controller.eliminar
 );
+
 
 module.exports = router;
