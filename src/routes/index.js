@@ -25,7 +25,7 @@ const habitacionesRoutes =
   require('./habitaciones.routes');
 
 const tiposHabitacionRoutes =
-  require('./tipos_habitacion.routes');
+  require('./tipos_habitaciones.routes');
 
 
 // ======================================================
