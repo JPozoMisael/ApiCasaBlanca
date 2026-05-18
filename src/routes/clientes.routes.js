@@ -1,15 +1,105 @@
 const express = require('express');
+
 const router = express.Router();
 
-const controller = require('../controllers/clientes.controller');
-const auth = require('../middleware/auth.middleware');
-const roles = require('../middleware/roles.middleware');
+const controller =
+  require('../controllers/clientes.controller');
 
-router.get('/', auth, roles('admin', 'empleado'), controller.listar);
-router.get('/:id', auth, roles('admin', 'empleado'), controller.obtenerPorId);
+const auth =
+  require('../middleware/auth.middleware');
 
-router.post('/', auth, roles('admin', 'empleado'), controller.crear);
-router.put('/:id', auth, roles('admin', 'empleado'), controller.actualizar);
-router.delete('/:id', auth, roles('admin'), controller.eliminar);
+const {
+  permitirRoles
+} = require('../middleware/roles.middleware');
+
+
+// ======================================================
+// LISTAR CLIENTES
+// ======================================================
+
+router.get(
+  '/',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin',
+    'recepcion'
+  ),
+
+  controller.listar
+);
+
+
+// ======================================================
+// OBTENER CLIENTE POR ID
+// ======================================================
+
+router.get(
+  '/:id',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin',
+    'recepcion'
+  ),
+
+  controller.obtenerPorId
+);
+
+
+// ======================================================
+// CREAR CLIENTE
+// ======================================================
+
+router.post(
+  '/',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin',
+    'recepcion'
+  ),
+
+  controller.crear
+);
+
+
+// ======================================================
+// ACTUALIZAR CLIENTE
+// ======================================================
+
+router.put(
+  '/:id',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin',
+    'recepcion'
+  ),
+
+  controller.actualizar
+);
+
+
+// ======================================================
+// ELIMINAR CLIENTE
+// ======================================================
+
+router.delete(
+  '/:id',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin'
+  ),
+
+  controller.eliminar
+);
+
 
 module.exports = router;

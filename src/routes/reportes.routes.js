@@ -1,10 +1,33 @@
 const express = require('express');
+
 const router = express.Router();
 
-const controller = require('../controllers/reportes.controller');
-const auth = require('../middleware/auth.middleware');
-const roles = require('../middleware/roles.middleware');
+const controller =
+  require('../controllers/reportes.controller');
 
-router.get('/dashboard', auth, roles('admin'), controller.dashboard);
+const auth =
+  require('../middleware/auth.middleware');
+
+const {
+  permitirRoles
+} = require('../middleware/roles.middleware');
+
+
+// ======================================================
+// DASHBOARD REPORTES
+// ======================================================
+
+router.get(
+  '/dashboard',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin'
+  ),
+
+  controller.dashboard
+);
+
 
 module.exports = router;

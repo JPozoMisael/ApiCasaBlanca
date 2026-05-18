@@ -1,27 +1,79 @@
 const express = require('express');
+
 const router = express.Router();
 
-const controller = require('../controllers/pagos.controller');
-const auth = require('../middleware/auth.middleware');
-const roles = require('../middleware/roles.middleware');
-const validate = require('../middleware/validate.middleware');
-const { crearPagoSchema } = require('../validators/pagos.schema');
+const controller =
+  require('../controllers/pagos.controller');
 
-router.get('/', auth, roles('admin', 'empleado'), controller.listarPorReserva);
+const auth =
+  require('../middleware/auth.middleware');
+
+const {
+  permitirRoles
+} = require('../middleware/roles.middleware');
+
+const validate =
+  require('../middleware/validate.middleware');
+
+const {
+  crearPagoSchema
+} = require('../validators/pagos.schema');
+
+
+// ======================================================
+// LISTAR PAGOS
+// ======================================================
+
+router.get(
+  '/',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin',
+    'recepcion'
+  ),
+
+  controller.listarPorReserva
+);
+
+
+// ======================================================
+// CREAR PAGO
+// ======================================================
 
 router.post(
   '/',
   auth,
-  roles('admin', 'empleado'),
+
+  permitirRoles(
+    'super_admin',
+    'admin',
+    'recepcion'
+  ),
+
   validate(crearPagoSchema),
+
   controller.crear
 );
+
+
+// ======================================================
+// CREAR Y CONFIRMAR PAGO
+// ======================================================
 
 router.post(
   '/confirmar',
   auth,
-  roles('admin', 'empleado'),
+
+  permitirRoles(
+    'super_admin',
+    'admin',
+    'recepcion'
+  ),
+
   controller.crearYConfirmar
 );
+
 
 module.exports = router;

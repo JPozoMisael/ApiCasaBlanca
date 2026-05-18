@@ -1,22 +1,111 @@
 const express = require('express');
+
 const router = express.Router();
 
-const controller = require('../controllers/tipos_habitacion.controller');
-const auth = require('../middleware/auth.middleware');
-const roles = require('../middleware/roles.middleware');
-const validate = require('../middleware/validate.middleware');
+const controller =
+  require('../controllers/tipos_habitacion.controller');
+
+const auth =
+  require('../middleware/auth.middleware');
+
+const {
+  permitirRoles
+} = require('../middleware/roles.middleware');
+
+const validate =
+  require('../middleware/validate.middleware');
+
 const {
   crearTipoHabitacionSchema,
   actualizarTipoHabitacionSchema
 } = require('../validators/tipos_habitacion.schema');
 
-// Público
-router.get('/', controller.listar);
-router.get('/:id', controller.obtenerPorId);
 
-// Protegido
-router.post('/', auth, roles('admin', 'empleado'), validate(crearTipoHabitacionSchema), controller.crear);
-router.put('/:id', auth, roles('admin', 'empleado'), validate(actualizarTipoHabitacionSchema), controller.actualizar);
-router.delete('/:id', auth, roles('admin'), controller.eliminar);
+// ======================================================
+// PUBLICO
+// ======================================================
+
+
+// =========================================
+// LISTAR
+// =========================================
+
+router.get(
+  '/',
+  controller.listar
+);
+
+
+// =========================================
+// OBTENER POR ID
+// =========================================
+
+router.get(
+  '/:id',
+  controller.obtenerPorId
+);
+
+
+// ======================================================
+// PROTEGIDO
+// ======================================================
+
+
+// =========================================
+// CREAR
+// =========================================
+
+router.post(
+  '/',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin',
+    'recepcion'
+  ),
+
+  validate(crearTipoHabitacionSchema),
+
+  controller.crear
+);
+
+
+// =========================================
+// ACTUALIZAR
+// =========================================
+
+router.put(
+  '/:id',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin',
+    'recepcion'
+  ),
+
+  validate(actualizarTipoHabitacionSchema),
+
+  controller.actualizar
+);
+
+
+// =========================================
+// ELIMINAR
+// =========================================
+
+router.delete(
+  '/:id',
+  auth,
+
+  permitirRoles(
+    'super_admin',
+    'admin'
+  ),
+
+  controller.eliminar
+);
+
 
 module.exports = router;

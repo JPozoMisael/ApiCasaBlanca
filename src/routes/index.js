@@ -1,101 +1,166 @@
 const express = require('express');
 
-const authRoutes = require('./auth.routes');
-const adminRoutes = require('./admin.routes');
-
-const hotelesRoutes = require('./hoteles.routes');
-const habitacionesRoutes = require('./habitaciones.routes');
-const tiposHabitacionRoutes = require('./tipos_habitaciones.routes');
-
-const clientesRoutes = require('./clientes.routes');
-const reservasRoutes = require('./reservas.routes');
-const pagosRoutes = require('./pagos.routes');
-
-const serviciosRoutes = require('./servicios.routes');
-const reportesRoutes = require('./reportes.routes');
-
 const router = express.Router();
 
-/*
-|--------------------------------------------------------------------------
-| API INFO
-|--------------------------------------------------------------------------
-*/
+
+// ======================================================
+// AUTH
+// ======================================================
+
+const authRoutes =
+  require('./auth.routes');
+
+const adminRoutes =
+  require('./admin.routes');
+
+
+// ======================================================
+// CORE
+// ======================================================
+
+const hotelesRoutes =
+  require('./hoteles.routes');
+
+const habitacionesRoutes =
+  require('./habitaciones.routes');
+
+const tiposHabitacionRoutes =
+  require('./tipos_habitacion.routes');
+
+
+// ======================================================
+// BUSINESS
+// ======================================================
+
+const clientesRoutes =
+  require('./clientes.routes');
+
+const reservasRoutes =
+  require('./reservas.routes');
+
+const pagosRoutes =
+  require('./pagos.routes');
+
+
+// ======================================================
+// EXTRA
+// ======================================================
+
+const serviciosRoutes =
+  require('./servicios.routes');
+
+const reportesRoutes =
+  require('./reportes.routes');
+
+
+// ======================================================
+// API INFO
+// ======================================================
 
 router.get('/', (req, res) => {
 
-  res.json({
+  return res.status(200).json({
+
     ok: true,
+
     message: 'API Casa Blanca v1',
+
     version: '1.0.0',
 
     endpoints: {
 
       auth: '/auth',
+
       admin: '/admin',
 
       hotels: '/hotels',
+
       rooms: '/rooms',
+
       roomTypes: '/room-types',
 
       clients: '/clients',
+
       bookings: '/bookings',
+
       payments: '/payments',
 
       services: '/services',
-      reports: '/reports'
-    }
+
+      reports: '/reports',
+    },
   });
 });
 
-/*
-|--------------------------------------------------------------------------
-| AUTH
-|--------------------------------------------------------------------------
-*/
 
-router.use('/auth', authRoutes);
+// ======================================================
+// AUTH
+// ======================================================
 
-/*
-|--------------------------------------------------------------------------
-| ADMIN
-|--------------------------------------------------------------------------
-*/
+router.use(
+  '/auth',
+  authRoutes
+);
 
-router.use('/admin', adminRoutes);
+router.use(
+  '/admin',
+  adminRoutes
+);
 
-/*
-|--------------------------------------------------------------------------
-| CORE
-|--------------------------------------------------------------------------
-*/
 
-router.use('/hotels', hotelesRoutes);
+// ======================================================
+// CORE
+// ======================================================
 
-router.use('/rooms', habitacionesRoutes);
+router.use(
+  '/hotels',
+  hotelesRoutes
+);
 
-router.use('/room-types', tiposHabitacionRoutes);
+router.use(
+  '/rooms',
+  habitacionesRoutes
+);
 
-/*
-|--------------------------------------------------------------------------
-| BUSINESS
-|--------------------------------------------------------------------------
-*/
+router.use(
+  '/room-types',
+  tiposHabitacionRoutes
+);
 
-router.use('/clients', clientesRoutes);
 
-router.use('/bookings', reservasRoutes);
+// ======================================================
+// BUSINESS
+// ======================================================
 
-router.use('/payments', pagosRoutes);
+router.use(
+  '/clients',
+  clientesRoutes
+);
 
-/*
-|--------------------------------------------------------------------------
-| EXTRA
-|--------------------------------------------------------------------------
-*/
+router.use(
+  '/bookings',
+  reservasRoutes
+);
 
-router.use('/services', serviciosRoutes);
+router.use(
+  '/payments',
+  pagosRoutes
+);
 
-router.use('/reports', reportesRoutes);
+
+// ======================================================
+// EXTRA
+// ======================================================
+
+router.use(
+  '/services',
+  serviciosRoutes
+);
+
+router.use(
+  '/reports',
+  reportesRoutes
+);
+
 
 module.exports = router;
