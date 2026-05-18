@@ -159,8 +159,7 @@ async function register(data) {
     nombre,
     apellido,
     email,
-    password,
-    rol
+    password
   } = data;
 
 
@@ -219,21 +218,11 @@ async function register(data) {
 
 
   // =====================================
-  // ROLES VÁLIDOS
+  // REGISTER PÚBLICO
+  // SIEMPRE CLIENTE
   // =====================================
 
-  const rolesValidos = [
-    'super_admin',
-    'admin',
-    'recepcion',
-    'cliente'
-  ];
-
-
-  const rolFinal =
-    rolesValidos.includes(rol)
-      ? rol
-      : 'cliente';
+  const rolFinal = 'cliente';
 
 
   // =====================================

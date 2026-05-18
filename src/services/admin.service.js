@@ -1,8 +1,12 @@
-const { models } = require('../models');
+const { models } =
+  require('../models');
+
+const { Op } =
+  require('sequelize');
 
 
 // =========================================
-// DASHBOARD
+// DASHBOARD GENERAL
 // =========================================
 
 async function dashboard() {
@@ -12,6 +16,8 @@ async function dashboard() {
     totalClientes,
     totalHabitaciones,
     ingresosTotales,
+    totalUsuarios
+
   ] = await Promise.all([
 
     models.Reserva.count(),
@@ -21,6 +27,8 @@ async function dashboard() {
     models.Habitacion.count(),
 
     models.Pago.sum('monto'),
+
+    models.User.count(),
   ]);
 
 
@@ -28,10 +36,168 @@ async function dashboard() {
     totalReservas,
     totalClientes,
     totalHabitaciones,
-    ingresosTotales: Number(
-      ingresosTotales || 0
-    ),
+    totalUsuarios,
+    ingresosTotales:
+      Number(
+        ingresosTotales || 0
+      ),
   };
+}
+
+
+// =========================================
+// DASHBOARD STATS
+// =========================================
+
+async function dashboardStats() {
+
+  const [
+    totalReservas,
+    reservasActivas,
+    reservasCanceladas,
+    totalHabitaciones,
+    habitacionesDisponibles,
+    totalClientes,
+    ingresosTotales
+
+  ] = await Promise.all([
+
+    // =====================================
+    // RESERVAS
+    // =====================================
+
+    models.Reserva.count(),
+
+    models.Reserva.count({
+      where: {
+        estado: {
+          [Op.notIn]: [
+            'cancelada',
+            'no_show'
+          ]
+        }
+      }
+    }),
+
+    models.Reserva.count({
+      where: {
+        estado: 'cancelada'
+      }
+    }),
+
+
+    // =====================================
+    // HABITACIONES
+    // =====================================
+
+    models.Habitacion.count(),
+
+    models.Habitacion.count({
+      where: {
+        estado: 'disponible'
+      }
+    }),
+
+
+    // =====================================
+    // CLIENTES
+    // =====================================
+
+    models.Cliente.count(),
+
+
+    // =====================================
+    // INGRESOS
+    // =====================================
+
+    models.Pago.sum('monto'),
+  ]);
+
+
+  return {
+
+    reservas: {
+
+      total:
+        totalReservas,
+
+      activas:
+        reservasActivas,
+
+      canceladas:
+        reservasCanceladas,
+    },
+
+
+    habitaciones: {
+
+      total:
+        totalHabitaciones,
+
+      disponibles:
+        habitacionesDisponibles,
+    },
+
+
+    clientes:
+      totalClientes,
+
+
+    ingresosTotales:
+      Number(
+        ingresosTotales || 0
+      ),
+  };
+}
+
+
+// =========================================
+// RESERVAS DEL DÍA
+// =========================================
+
+async function todayBookings() {
+
+  const hoy =
+    new Date();
+
+  hoy.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+
+  const manana =
+    new Date(hoy);
+
+  manana.setDate(
+    manana.getDate() + 1
+  );
+
+
+  const reservas =
+    await models.Reserva.findAll({
+
+      where: {
+
+        createdAt: {
+
+          [Op.gte]: hoy,
+
+          [Op.lt]: manana,
+        },
+      },
+
+      order: [
+        ['createdAt', 'DESC']
+      ],
+
+      limit: 20,
+    });
+
+
+  return reservas;
 }
 
 
@@ -43,7 +209,9 @@ async function listarUsuarios() {
 
   return models.User.findAll({
 
-    order: [['id', 'DESC']],
+    order: [
+      ['id', 'DESC']
+    ],
 
     attributes: {
       exclude: ['password'],
@@ -65,18 +233,21 @@ async function crearUsuario(data) {
     email,
     password,
     rol,
+
   } = data;
 
 
-  // ===============================
-  // VALIDACIONES
-  // ===============================
+  // =====================================
+  // VALIDAR DATOS
+  // =====================================
 
   if (
+
     !nombre ||
     !apellido ||
     !email ||
     !password
+
   ) {
 
     const err = new Error(
@@ -89,18 +260,19 @@ async function crearUsuario(data) {
   }
 
 
-  // ===============================
+  // =====================================
   // NORMALIZAR EMAIL
-  // ===============================
+  // =====================================
 
-  const emailNorm = String(email)
-    .trim()
-    .toLowerCase();
+  const emailNorm =
+    String(email)
+      .trim()
+      .toLowerCase();
 
 
-  // ===============================
+  // =====================================
   // VALIDAR ROLES
-  // ===============================
+  // =====================================
 
   const rolesValidos = [
     'super_admin',
@@ -111,8 +283,11 @@ async function crearUsuario(data) {
 
 
   if (
+
     rol &&
+
     !rolesValidos.includes(rol)
+
   ) {
 
     const err = new Error(
@@ -125,15 +300,17 @@ async function crearUsuario(data) {
   }
 
 
-  // ===============================
+  // =====================================
   // VALIDAR EMAIL DUPLICADO
-  // ===============================
+  // =====================================
 
-  const existe = await models.User.findOne({
-    where: {
-      email: emailNorm,
-    },
-  });
+  const existe =
+    await models.User.findOne({
+
+      where: {
+        email: emailNorm,
+      },
+    });
 
 
   if (existe) {
@@ -148,26 +325,24 @@ async function crearUsuario(data) {
   }
 
 
-  // ===============================
+  // =====================================
   // CREAR USUARIO
-  // ===============================
+  // =====================================
 
-  const usuario = await models.User.create({
+  const usuario =
+    await models.User.create({
 
-    hotel_id: hotel_id || null,
+      hotel_id:
+        hotel_id || null,
+      nombre,
+      apellido,
+      email: emailNorm,
+      password,
+      rol:
+        rol || 'cliente',
 
-    nombre,
-
-    apellido,
-
-    email: emailNorm,
-
-    password,
-
-    rol: rol || 'cliente',
-
-    estado: 'activo',
-  });
+      estado: 'activo',
+    });
 
 
   return usuario;
@@ -178,15 +353,27 @@ async function crearUsuario(data) {
 // CAMBIAR ROL
 // =========================================
 
-async function cambiarRol(id, rol) {
+async function cambiarRol(
+  id,
+  rol
+) {
 
-  const user = await models.User.findByPk(id);
+  const user =
+    await models.User.findByPk(id);
 
+
+  // =====================================
+  // VALIDAR USUARIO
+  // =====================================
 
   if (!user) {
     return null;
   }
 
+
+  // =====================================
+  // VALIDAR ROLES
+  // =====================================
 
   const rolesValidos = [
     'super_admin',
@@ -196,7 +383,9 @@ async function cambiarRol(id, rol) {
   ];
 
 
-  if (!rolesValidos.includes(rol)) {
+  if (
+    !rolesValidos.includes(rol)
+  ) {
 
     const err = new Error(
       'Rol inválido'
@@ -208,7 +397,13 @@ async function cambiarRol(id, rol) {
   }
 
 
-  await user.update({ rol });
+  // =====================================
+  // ACTUALIZAR
+  // =====================================
+
+  await user.update({
+    rol
+  });
 
 
   return user;
@@ -217,6 +412,8 @@ async function cambiarRol(id, rol) {
 
 module.exports = {
   dashboard,
+  dashboardStats,
+  todayBookings,
   listarUsuarios,
   crearUsuario,
   cambiarRol,

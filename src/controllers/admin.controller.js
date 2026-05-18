@@ -1,4 +1,5 @@
-const adminService = require('../services/admin.service');
+const adminService =
+  require('../services/admin.service');
 
 
 // =========================================
@@ -6,21 +7,104 @@ const adminService = require('../services/admin.service');
 // GET /api/v1/admin/dashboard
 // =========================================
 
-async function dashboard(req, res, next) {
+async function dashboard(
+  req,
+  res,
+  next
+) {
 
   try {
 
-    const data = await adminService.dashboard();
+    const data =
+      await adminService.dashboard();
 
     return res.status(200).json({
+
       ok: true,
+
       data,
     });
 
   } catch (error) {
 
     console.error(
+
       'Error dashboard:',
+
+      error.message
+    );
+
+    next(error);
+  }
+}
+
+
+// =========================================
+// DASHBOARD STATS
+// GET /api/v1/admin/dashboard/stats
+// =========================================
+
+async function dashboardStats(
+  req,
+  res,
+  next
+) {
+
+  try {
+
+    const stats =
+      await adminService.dashboardStats();
+
+    return res.status(200).json({
+
+      ok: true,
+
+      data: stats,
+    });
+
+  } catch (error) {
+
+    console.error(
+
+      'Error dashboard stats:',
+
+      error.message
+    );
+
+    next(error);
+  }
+}
+
+
+// =========================================
+// RESERVAS DEL DÍA
+// GET /api/v1/admin/dashboard/today-bookings
+// =========================================
+
+async function todayBookings(
+  req,
+  res,
+  next
+) {
+
+  try {
+
+    const reservas =
+      await adminService.todayBookings();
+
+    return res.status(200).json({
+
+      ok: true,
+
+      data: reservas,
+    });
+
+  } catch (error) {
+
+    console.error(
+
+      'Error today bookings:',
+
       error.message
     );
 
@@ -34,7 +118,11 @@ async function dashboard(req, res, next) {
 // GET /api/v1/admin/usuarios
 // =========================================
 
-async function listarUsuarios(req, res, next) {
+async function listarUsuarios(
+  req,
+  res,
+  next
+) {
 
   try {
 
@@ -42,8 +130,11 @@ async function listarUsuarios(req, res, next) {
       await adminService.listarUsuarios();
 
     return res.status(200).json({
+
       ok: true,
+
       data: usuarios,
+
       meta: {
         total: usuarios.length,
       },
@@ -52,7 +143,9 @@ async function listarUsuarios(req, res, next) {
   } catch (error) {
 
     console.error(
+
       'Error listar usuarios:',
+
       error.message
     );
 
@@ -66,7 +159,11 @@ async function listarUsuarios(req, res, next) {
 // POST /api/v1/admin/usuarios
 // =========================================
 
-async function crearUsuario(req, res, next) {
+async function crearUsuario(
+  req,
+  res,
+  next
+) {
 
   try {
 
@@ -76,16 +173,21 @@ async function crearUsuario(req, res, next) {
       );
 
     return res.status(201).json({
+
       ok: true,
+
       message:
         'Usuario creado correctamente',
+
       data: usuario,
     });
 
   } catch (error) {
 
     console.error(
+
       'Error crear usuario:',
+
       error.message
     );
 
@@ -99,36 +201,48 @@ async function crearUsuario(req, res, next) {
 // PATCH /api/v1/admin/usuarios/:id/rol
 // =========================================
 
-async function cambiarRol(req, res, next) {
+async function cambiarRol(
+  req,
+  res,
+  next
+) {
 
   try {
 
-    const id = Number(req.params.id);
+    const id =
+      Number(req.params.id);
 
-    const { rol } = req.body;
+    const { rol } =
+      req.body;
 
 
-    // ===============================
+    // =====================================
     // VALIDAR ID
-    // ===============================
+    // =====================================
 
     if (isNaN(id)) {
 
       return res.status(400).json({
+
         ok: false,
+
         message: 'ID inválido',
       });
     }
 
 
-    // ===============================
+    // =====================================
     // ROLES VÁLIDOS
-    // ===============================
+    // =====================================
 
     const rolesValidos = [
+
       'super_admin',
+
       'admin',
+
       'recepcion',
+
       'cliente',
     ];
 
@@ -139,15 +253,17 @@ async function cambiarRol(req, res, next) {
     ) {
 
       return res.status(400).json({
+
         ok: false,
+
         message: 'Rol inválido',
       });
     }
 
 
-    // ===============================
-    // ACTUALIZAR
-    // ===============================
+    // =====================================
+    // ACTUALIZAR ROL
+    // =====================================
 
     const usuario =
       await adminService.cambiarRol(
@@ -156,10 +272,16 @@ async function cambiarRol(req, res, next) {
       );
 
 
+    // =====================================
+    // NO ENCONTRADO
+    // =====================================
+
     if (!usuario) {
 
       return res.status(404).json({
+
         ok: false,
+
         message:
           'Usuario no encontrado',
       });
@@ -167,16 +289,21 @@ async function cambiarRol(req, res, next) {
 
 
     return res.status(200).json({
+
       ok: true,
+
       message:
         'Rol actualizado correctamente',
+
       data: usuario,
     });
 
   } catch (error) {
 
     console.error(
+
       'Error cambiar rol:',
+
       error.message
     );
 
@@ -187,6 +314,8 @@ async function cambiarRol(req, res, next) {
 
 module.exports = {
   dashboard,
+  dashboardStats,
+  todayBookings,
   listarUsuarios,
   crearUsuario,
   cambiarRol,
