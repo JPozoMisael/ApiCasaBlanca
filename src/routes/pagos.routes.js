@@ -1,79 +1,22 @@
 const express = require('express');
-
 const router = express.Router();
+const controller = require('../controllers/pagos.controller');
 
-const controller =
-  require('../controllers/pagos.controller');
-
-const auth =
-  require('../middleware/auth.middleware');
-
-const {
-  permitirRoles
-} = require('../middleware/roles.middleware');
-
-const validate =
-  require('../middleware/validate.middleware');
-
-const {
-  crearPagoSchema
-} = require('../validators/pagos.schema');
-
+const { auth } = require('../middleware/auth.middleware');
+const { permitirRoles } = require('../middleware/roles.middleware');
 
 // ======================================================
-// LISTAR PAGOS
+// RUTAS PÚBLICAS
 // ======================================================
-
-router.get(
-  '/',
-  auth,
-
-  permitirRoles(
-    'super_admin',
-    'admin',
-    'recepcion'
-  ),
-
-  controller.listarPorReserva
-);
-
+// ✅ CORREGIDO: El nombre correcto es 'metodosDisponibles', no 'getMetodosDisponibles'
+router.get('/metodos', controller.metodosDisponibles);
 
 // ======================================================
-// CREAR PAGO
+// RUTAS PROTEGIDAS
 // ======================================================
-
-router.post(
-  '/',
-  auth,
-
-  permitirRoles(
-    'super_admin',
-    'admin',
-    'recepcion'
-  ),
-
-  validate(crearPagoSchema),
-
-  controller.crear
-);
-
-
-// ======================================================
-// CREAR Y CONFIRMAR PAGO
-// ======================================================
-
-router.post(
-  '/confirmar',
-  auth,
-
-  permitirRoles(
-    'super_admin',
-    'admin',
-    'recepcion'
-  ),
-
-  controller.crearYConfirmar
-);
-
+router.get('/', auth, permitirRoles('super_admin', 'admin', 'recepcion'), controller.listar);
+router.get('/:id', auth, permitirRoles('super_admin', 'admin', 'recepcion'), controller.obtenerPorId);
+router.post('/stripe', auth, controller.iniciarPago);
+router.post('/confirmar', controller.confirmarPago);
 
 module.exports = router;

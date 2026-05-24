@@ -5,8 +5,7 @@ const router = express.Router();
 const controller =
   require('../controllers/hoteles.controller');
 
-const auth =
-  require('../middleware/auth.middleware');
+const { auth } = require('../middleware/auth.middleware');
 
 const {
   permitirRoles
