@@ -79,49 +79,19 @@ async function eliminarHotel(id) {
 ====================================================== */
 
 async function obtenerResumenHoteles() {
-
-  const [rows] =
-    await sequelize.query(`
-
-      SELECT
-        h.id,
-        h.nombre,
-        h.slug,
-
-        h.estrellas AS rating,
-
-        MIN(hab.precio_noche) AS precio_desde,
-
-        COALESCE(
-          MAX(
-            CASE
-              WHEN hab.imagen_url IS NOT NULL
-               AND hab.imagen_url <> ''
-              THEN hab.imagen_url
-            END
-          ),
-          ''
-        ) AS imagen
-
-      FROM hoteles h
-
-      INNER JOIN habitaciones hab
-        ON hab.hotel_id = h.id
-
-      WHERE
-        h.estado = 'activo'
-        AND hab.estado = 'disponible'
-
-      GROUP BY
-        h.id,
-        h.nombre,
-        h.slug,
-        h.estrellas
-
-      ORDER BY precio_desde ASC
-
-    `);
-
+  const [rows] = await sequelize.query(`
+    SELECT
+      h.id,
+      h.nombre,
+      h.slug,
+      h.estrellas AS rating,
+      MIN(hab.precio_noche) AS precio_desde
+    FROM hoteles h
+    INNER JOIN habitaciones hab ON hab.hotel_id = h.id
+    WHERE h.estado = 'activo' AND hab.estado = 'disponible'
+    GROUP BY h.id, h.nombre, h.slug, h.estrellas
+    ORDER BY precio_desde ASC
+  `);
   return rows;
 }
 
@@ -131,50 +101,26 @@ async function obtenerResumenHoteles() {
 
 async function obtenerHotelDestacado() {
   const [rows] = await sequelize.query(`
-
     SELECT
       h.id,
       h.nombre,
       h.slug,
       h.estrellas AS rating,
       COALESCE(COUNT(r.id), 0) AS reservas_semana,
-      MIN(hab.precio_noche) AS precio_desde,
-      COALESCE(
-        MAX(
-          CASE
-            WHEN hab.imagen_url IS NOT NULL AND hab.imagen_url <> ''
-            THEN hab.imagen_url
-          END
-        ),
-        ''
-      ) AS imagen
-
+      MIN(hab.precio_noche) AS precio_desde
     FROM hoteles h
-
     LEFT JOIN reservas r
       ON r.hotel_id = h.id
       AND r.estado NOT IN ('cancelada', 'no_show')
       AND r.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-
-    INNER JOIN habitaciones hab
-      ON hab.hotel_id = h.id
-
+    INNER JOIN habitaciones hab ON hab.hotel_id = h.id
     WHERE h.estado = 'activo'
-
-    GROUP BY
-      h.id,
-      h.nombre,
-      h.slug,
-      h.estrellas
-
+    GROUP BY h.id, h.nombre, h.slug, h.estrellas
     ORDER BY reservas_semana DESC
-
     LIMIT 1
-
   `);
 
   if (!rows.length) {
-    // Si no hay ningún hotel, devuelve el primero disponible
     const [fallback] = await sequelize.query(`
       SELECT
         h.id,
@@ -182,25 +128,14 @@ async function obtenerHotelDestacado() {
         h.slug,
         h.estrellas AS rating,
         0 AS reservas_semana,
-        MIN(hab.precio_noche) AS precio_desde,
-        COALESCE(
-          MAX(
-            CASE
-              WHEN hab.imagen_url IS NOT NULL AND hab.imagen_url <> ''
-              THEN hab.imagen_url
-            END
-          ),
-          ''
-        ) AS imagen
+        MIN(hab.precio_noche) AS precio_desde
       FROM hoteles h
       INNER JOIN habitaciones hab ON hab.hotel_id = h.id
       WHERE h.estado = 'activo'
       GROUP BY h.id
       LIMIT 1
     `);
-    
     if (!fallback.length) return null;
-    
     return {
       ...fallback[0],
       badge: 'Hotel destacado',
