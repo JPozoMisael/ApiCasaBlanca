@@ -3,99 +3,100 @@ const {
   verificarToken,
 } = require('../utils/tokens');
 
-
 // =========================================
-// AUTH MIDDLEWARE
+// MIDDLEWARE PRINCIPAL
 // =========================================
-
-module.exports = function auth(
-  req,
-  res,
-  next
-) {
-
+function auth(req, res, next) {
   try {
-
-    // =====================================
-    // EXTRAER TOKEN
-    // =====================================
-
-    const authHeader =
-      req.headers.authorization || '';
-
-    const token =
-      extraerBearerToken(authHeader);
-
-
-    // =====================================
-    // VALIDAR TOKEN EXISTENTE
-    // =====================================
+    const authHeader = req.headers.authorization || '';
+    const token = extraerBearerToken(authHeader);
 
     if (!token) {
-
       return res.status(401).json({
         ok: false,
-        message:
-          'No autorizado: token faltante',
+        message: 'No autorizado: token faltante',
       });
     }
 
+    const payload = verificarToken(token);
 
-    // =====================================
-    // VERIFICAR JWT
-    // =====================================
-
-    const payload =
-      verificarToken(token);
-
-
-    // =====================================
-    // VALIDAR PAYLOAD
-    // =====================================
-
-    if (
-      !payload ||
-      !payload.id ||
-      !payload.rol
-    ) {
-
+    if (!payload || !payload.id || !payload.rol) {
       return res.status(401).json({
         ok: false,
         message: 'Token inválido',
       });
     }
 
-
-    // =====================================
-    // NORMALIZAR USER
-    // =====================================
-
     req.user = {
       id: Number(payload.id),
-
-      rol: String(payload.rol)
-        .trim()
-        .toLowerCase(),
+      rol: String(payload.rol).trim().toLowerCase(),
     };
 
-
-    // =====================================
-    // CONTINUAR
-    // =====================================
-
     next();
-
   } catch (error) {
-
-    console.error(
-      'Error auth middleware:',
-      error.message
-    );
-
+    console.error('Error auth middleware:', error.message);
     return res.status(401).json({
       ok: false,
-      message:
-        'No autorizado: token inválido o expirado',
+      message: 'No autorizado: token inválido o expirado',
     });
   }
+}
+
+// =========================================
+// VERIFICAR ROL ESPECÍFICO
+// =========================================
+const verificarRol = (rolesPermitidos = []) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        ok: false,
+        message: 'No autenticado'
+      });
+    }
+
+    if (!rolesPermitidos.includes(req.user.rol)) {
+      return res.status(403).json({
+        ok: false,
+        message: `Acceso denegado. Roles permitidos: ${rolesPermitidos.join(', ')}`
+      });
+    }
+
+    next();
+  };
+};
+
+// =========================================
+// VERIFICAR ADMIN
+// =========================================
+const verificarAdmin = (req, res, next) => {
+  if (!req.user || (req.user.rol !== 'admin' && req.user.rol !== 'super_admin')) {
+    return res.status(403).json({
+      ok: false,
+      message: 'Acceso denegado. Se requiere rol de administrador'
+    });
+  }
+  next();
+};
+
+// =========================================
+// VERIFICAR SUPER ADMIN
+// =========================================
+const verificarSuperAdmin = (req, res, next) => {
+  if (!req.user || req.user.rol !== 'super_admin') {
+    return res.status(403).json({
+      ok: false,
+      message: 'Acceso denegado. Se requiere rol de super administrador'
+    });
+  }
+  next();
+};
+
+// =========================================
+// EXPORTS
+// =========================================
+module.exports = {
+  auth,
+  verificarRol,
+  verificarAdmin,
+  verificarSuperAdmin
 };

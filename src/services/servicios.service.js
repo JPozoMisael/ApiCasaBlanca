@@ -1,4 +1,3 @@
-// src/services/servicios.service.js
 const serviciosRepo = require('../repositories/servicios.repo');
 
 async function listarServicios(filtros = {}) {
