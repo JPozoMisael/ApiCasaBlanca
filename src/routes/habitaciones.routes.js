@@ -3,7 +3,6 @@ const router = express.Router();
 
 const controller = require('../controllers/habitaciones.controller');
 
-// ✅ CORREGIDO: Importar auth como función
 const { auth } = require('../middleware/auth.middleware');
 const { permitirRoles } = require('../middleware/roles.middleware');
 
@@ -83,7 +82,7 @@ router.get(
 // =========================================
 router.post(
   '/',
-  auth,  // ✅ Ahora es función válida
+  auth, 
   permitirRoles('super_admin', 'admin', 'recepcion'),
   validate(crearHabitacionSchema),
   controller.crear
@@ -94,7 +93,7 @@ router.post(
 // =========================================
 router.put(
   '/:id',
-  auth,  // ✅ Ahora es función válida
+  auth,  
   permitirRoles('super_admin', 'admin', 'recepcion'),
   validate(actualizarHabitacionSchema),
   controller.actualizar
@@ -105,7 +104,7 @@ router.put(
 // =========================================
 router.delete(
   '/:id',
-  auth,  // ✅ Ahora es función válida
+  auth,  
   permitirRoles('super_admin', 'admin'),
   controller.eliminar
 );

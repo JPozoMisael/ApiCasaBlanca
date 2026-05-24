@@ -3,7 +3,6 @@ const express = require('express');
 const router = express.Router();
 const reportesController = require('../controllers/reportes.controller');
 
-// ✅ CORREGIDO: Ruta correcta (sin "s") y destructuring
 const { auth, verificarRol } = require('../middleware/auth.middleware');
 
 // Todas las rutas requieren autenticación

@@ -25,35 +25,30 @@ const {
 // ======================================================
 
 
-// 🔥 BOOKING HOME
 router.get(
   '/featured',
   controller.destacado
 );
 
 
-// 🔥 RESUMEN HOTELES
 router.get(
   '/resumen',
   controller.resumen
 );
 
 
-// 🔥 POR SLUG
 router.get(
   '/slug/:slug',
   controller.obtenerPorSlug
 );
 
 
-// 🔥 LISTAR
 router.get(
   '/',
   controller.listar
 );
 
 
-// 🔥 POR ID
 router.get(
   '/:id',
   controller.obtenerPorId

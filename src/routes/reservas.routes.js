@@ -3,7 +3,6 @@ const router = express.Router();
 
 const controller = require('../controllers/reservas.controller');
 
-// ✅ CORREGIDO: Importar auth como función
 const { auth } = require('../middleware/auth.middleware');
 const { permitirRoles } = require('../middleware/roles.middleware');
 
@@ -35,7 +34,7 @@ router.post(
 // =========================================
 router.get(
   '/',
-  auth,  // ✅ Ahora es función válida
+  auth, 
   permitirRoles('super_admin', 'admin', 'recepcion'),
   controller.listar
 );
@@ -45,7 +44,7 @@ router.get(
 // =========================================
 router.get(
   '/:id',
-  auth,  // ✅ Ahora es función válida
+  auth,  
   permitirRoles('super_admin', 'admin', 'recepcion'),
   controller.obtenerPorId
 );
@@ -55,7 +54,7 @@ router.get(
 // =========================================
 router.put(
   '/:id',
-  auth,  // ✅ Ahora es función válida
+  auth,  
   permitirRoles('super_admin', 'admin', 'recepcion'),
   validate(actualizarReservaSchema),
   controller.actualizar
@@ -66,7 +65,7 @@ router.put(
 // =========================================
 router.patch(
   '/:id/cancelar',
-  auth,  // ✅ Ahora es función válida
+  auth,  
   permitirRoles('super_admin', 'admin', 'recepcion'),
   controller.cancelar
 );

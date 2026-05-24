@@ -8,7 +8,6 @@ const { permitirRoles } = require('../middleware/roles.middleware');
 // ======================================================
 // RUTAS PÚBLICAS
 // ======================================================
-// ✅ CORREGIDO: El nombre correcto es 'metodosDisponibles', no 'getMetodosDisponibles'
 router.get('/metodos', controller.metodosDisponibles);
 
 // ======================================================
