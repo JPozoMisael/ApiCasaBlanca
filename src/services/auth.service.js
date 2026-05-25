@@ -11,6 +11,7 @@ async function login({ email, password }) {
   console.log('🔐 [LOGIN] Iniciando proceso de login');
   console.log(`📧 [LOGIN] Email recibido: ${email}`);
   console.log(`🔑 [LOGIN] Password recibida: ${password ? '***' : 'VACÍA'}`);
+  console.log(`🔑 [LOGIN] Longitud password: ${password ? password.length : 0}`);
 
   // =====================================
   // VALIDAR DATOS
@@ -35,6 +36,8 @@ async function login({ email, password }) {
   // =====================================
 
   console.log('🔍 [LOGIN] Buscando usuario en la base de datos...');
+  console.log('🔍 [LOGIN] Usando scope: withPassword');
+  
   const user = await models.User
     .scope('withPassword')
     .findOne({
@@ -43,6 +46,7 @@ async function login({ email, password }) {
 
   if (!user) {
     console.log('❌ [LOGIN] Usuario NO encontrado en la BD');
+    console.log(`❌ [LOGIN] Email buscado: ${emailNorm}`);
     const err = new Error('Credenciales inválidas');
     err.statusCode = 401;
     throw err;
@@ -53,7 +57,9 @@ async function login({ email, password }) {
   console.log(`   - Email: ${user.email}`);
   console.log(`   - Rol: ${user.rol}`);
   console.log(`   - Estado: ${user.estado}`);
+  console.log(`   - Nombre: ${user.nombre} ${user.apellido}`);
   console.log(`   - Password hash: ${user.password ? user.password.substring(0, 30) + '...' : 'NO HAY PASSWORD'}`);
+  console.log(`   - Longitud hash: ${user.password ? user.password.length : 0}`);
 
   // =====================================
   // VALIDAR ESTADO
@@ -70,16 +76,27 @@ async function login({ email, password }) {
   // VALIDAR PASSWORD
   // =====================================
 
-  console.log('🔑 [LOGIN] Comparando contraseña...');
-  const valido = await user.comparePassword(password);
-  console.log(`🔑 [LOGIN] Resultado comparación: ${valido ? '✅ VÁLIDA' : '❌ INVÁLIDA'}`);
-
-  if (!valido) {
-    console.log('❌ [LOGIN] Contraseña incorrecta');
-    const err = new Error('Credenciales inválidas');
-    err.statusCode = 401;
-    throw err;
+  console.log('🔑 [LOGIN] Iniciando comparación de contraseña...');
+  console.log(`🔑 [LOGIN] Password ingresada (longitud): ${password.length}`);
+  console.log(`🔑 [LOGIN] Hash almacenado (longitud): ${user.password.length}`);
+  
+  try {
+    const valido = await user.comparePassword(password);
+    console.log(`🔑 [LOGIN] Resultado de comparePassword: ${valido}`);
+    console.log(`🔑 [LOGIN] Tipo de resultado: ${typeof valido}`);
+    
+    if (!valido) {
+      console.log('❌ [LOGIN] Contraseña incorrecta - comparePassword devolvió false');
+      const err = new Error('Credenciales inválidas');
+      err.statusCode = 401;
+      throw err;
+    }
+  } catch (error) {
+    console.log(`❌ [LOGIN] Error en comparePassword: ${error.message}`);
+    throw error;
   }
+
+  console.log('✅ [LOGIN] Contraseña válida');
 
   // =====================================
   // ACTUALIZAR ÚLTIMO LOGIN
@@ -87,6 +104,7 @@ async function login({ email, password }) {
 
   console.log('📝 [LOGIN] Actualizando último login...');
   await user.update({ ultimo_login: new Date() });
+  console.log('✅ [LOGIN] Último login actualizado');
 
   // =====================================
   // GENERAR TOKEN
@@ -97,6 +115,7 @@ async function login({ email, password }) {
     { id: user.id, rol: user.rol },
     process.env.JWT_EXPIRE || '8h'
   );
+  console.log(`✅ [LOGIN] Token generado (primeros 50 chars): ${token ? token.substring(0, 50) + '...' : 'NO TOKEN'}`);
 
   // =====================================
   // RETORNAR USUARIO SEGURO
@@ -104,6 +123,7 @@ async function login({ email, password }) {
 
   console.log('👤 [LOGIN] Obteniendo usuario seguro (sin password)...');
   const usuarioSeguro = await models.User.findByPk(user.id);
+  console.log(`✅ [LOGIN] Usuario seguro obtenido: ${usuarioSeguro ? 'OK' : 'NULL'}`);
 
   console.log('✅ [LOGIN] LOGIN EXITOSO');
   console.log('=========================================');
@@ -123,6 +143,7 @@ async function register(data) {
   console.log('📝 [REGISTER] Iniciando registro de usuario');
   console.log(`📧 [REGISTER] Email: ${data.email}`);
   console.log(`👤 [REGISTER] Nombre: ${data.nombre} ${data.apellido}`);
+  console.log(`🔑 [REGISTER] Password recibida: ${data.password ? '***' : 'VACÍA'}`);
 
   const { hotel_id, nombre, apellido, email, password } = data;
 
@@ -148,6 +169,7 @@ async function register(data) {
   // VALIDAR EMAIL EXISTENTE
   // =====================================
 
+  console.log('🔍 [REGISTER] Verificando si el email ya existe...');
   const existe = await models.User.findOne({
     where: { email: emailNorm }
   });
@@ -171,6 +193,13 @@ async function register(data) {
   // =====================================
 
   console.log('💾 [REGISTER] Creando usuario en la base de datos...');
+  console.log(`   - hotel_id: ${hotel_id || null}`);
+  console.log(`   - nombre: ${nombre}`);
+  console.log(`   - apellido: ${apellido}`);
+  console.log(`   - email: ${emailNorm}`);
+  console.log(`   - rol: ${rolFinal}`);
+  console.log(`   - estado: activo`);
+  
   const nuevoUsuario = await models.User.create({
     hotel_id: hotel_id || null,
     nombre,
