@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const bcrypt = require('bcryptjs'); // ← Agregado para hashear contraseñas
 
 const routes = require('./routes');
 const notFound = require('./middleware/notFound.middleware');
@@ -101,6 +102,7 @@ app.get('/', (req, res) => {
       api: '/api/v1',
       testDb: '/test-db',
       testUsers: '/test-users',
+      testUpdatePassword: '/test-update-password',
     },
   });
 });
@@ -147,6 +149,63 @@ app.get('/test-users', async (req, res) => {
       details: error.parent ? error.parent.message : null
     });
   }
+});
+
+// =============================================
+// ENDPOINT PARA ACTUALIZAR CONTRASEÑA (TEMPORAL)
+// =============================================
+app.post('/test-update-password', async (req, res) => {
+  console.log('=========================================');
+  console.log('🔐 [UPDATE-PASSWORD] Iniciando actualización');
+  console.log(`📧 [UPDATE-PASSWORD] Body recibido:`, req.body);
+  
+  try {
+    const { email, newPassword } = req.body;
+    
+    if (!email || !newPassword) {
+      console.log('❌ [UPDATE-PASSWORD] Email o password faltante');
+      return res.status(400).json({ 
+        ok: false, 
+        message: 'Email y newPassword son requeridos' 
+      });
+    }
+    
+    console.log(`📧 [UPDATE-PASSWORD] Email: ${email}`);
+    console.log(`🔑 [UPDATE-PASSWORD] Nueva password: ${newPassword}`);
+    
+    // Generar hash de la nueva contraseña
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log(`🔑 [UPDATE-PASSWORD] Hash generado: ${hashedPassword.substring(0, 30)}...`);
+    
+    // Actualizar en la base de datos
+    const [updated] = await models.User.update(
+      { password: hashedPassword },
+      { where: { email: email } }
+    );
+    
+    if (updated) {
+      console.log(`✅ [UPDATE-PASSWORD] Contraseña actualizada para ${email}`);
+      console.log(`✅ [UPDATE-PASSWORD] Registros afectados: ${updated}`);
+      res.json({ 
+        ok: true, 
+        message: `Contraseña actualizada para ${email}`,
+        email: email
+      });
+    } else {
+      console.log(`❌ [UPDATE-PASSWORD] Usuario ${email} no encontrado`);
+      res.json({ 
+        ok: false, 
+        message: `Usuario ${email} no encontrado` 
+      });
+    }
+  } catch (error) {
+    console.error('❌ [UPDATE-PASSWORD] Error:', error.message);
+    res.status(500).json({ 
+      ok: false, 
+      message: error.message 
+    });
+  }
+  console.log('=========================================');
 });
 
 /*
