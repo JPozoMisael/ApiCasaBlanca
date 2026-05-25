@@ -8,6 +8,8 @@ const notFound = require('./middleware/notFound.middleware');
 const errorHandler = require('./middleware/error.middleware');
 const { limiterBasico } = require('./middleware/rateLimit.middleware');
 const { applyAssociations } = require('./models');
+const { sequelize } = require('./config/db');
+const models = require('./models');
 
 applyAssociations();
 
@@ -74,7 +76,7 @@ app.use(limiterBasico);
 
 /*
 |--------------------------------------------------------------------------
-| HEALTH + ROOT
+| HEALTH + ROOT + TEST
 |--------------------------------------------------------------------------
 */
 
@@ -97,8 +99,54 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       api: '/api/v1',
+      testDb: '/test-db',
+      testUsers: '/test-users',
     },
   });
+});
+
+// =============================================
+// ENDPOINTS DE PRUEBA PARA DEPURAR CONEXIÓN
+// =============================================
+
+// Probar conexión a la base de datos
+app.get('/test-db', async (req, res) => {
+  try {
+    const [result] = await sequelize.query('SELECT 1+1 AS resultado');
+    res.status(200).json({ 
+      ok: true, 
+      message: 'Conexión a BD exitosa', 
+      data: result 
+    });
+  } catch (error) {
+    console.error('Error en test-db:', error.message);
+    res.status(500).json({ 
+      ok: false, 
+      message: error.message,
+      details: error.parent ? error.parent.message : null
+    });
+  }
+});
+
+// Probar obtener usuarios de la tabla users
+app.get('/test-users', async (req, res) => {
+  try {
+    const users = await models.User.findAll({
+      attributes: ['id', 'nombre', 'apellido', 'email', 'rol', 'estado']
+    });
+    res.status(200).json({ 
+      ok: true, 
+      total: users.length,
+      users: users 
+    });
+  } catch (error) {
+    console.error('Error en test-users:', error.message);
+    res.status(500).json({ 
+      ok: false, 
+      message: error.message,
+      details: error.parent ? error.parent.message : null
+    });
+  }
 });
 
 /*
