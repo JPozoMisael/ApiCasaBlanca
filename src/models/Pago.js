@@ -1,4 +1,5 @@
 const { DataTypes } = require('sequelize');
+
 const { sequelize } = require('../config/db');
 
 const Pago = sequelize.define(
@@ -18,6 +19,7 @@ const Pago = sequelize.define(
     monto: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
+
       validate: {
         min: 0.01,
       },
@@ -26,11 +28,13 @@ const Pago = sequelize.define(
     metodo: {
       type: DataTypes.ENUM(
         'tarjeta',
+        'stripe',
         'efectivo',
         'transferencia',
         'paypal',
         'deposito'
       ),
+
       allowNull: false,
     },
 
@@ -41,49 +45,74 @@ const Pago = sequelize.define(
         'rechazado',
         'anulado'
       ),
+
       allowNull: false,
+
       defaultValue: 'pendiente',
     },
 
     referencia: {
       type: DataTypes.STRING(100),
+
       allowNull: true,
-      unique: true, // 🔥 importante para pagos externos
+
+      unique: true,
     },
 
     observaciones: {
       type: DataTypes.TEXT,
+
       allowNull: true,
     },
 
     fecha_pago: {
       type: DataTypes.DATE,
+
       allowNull: false,
+
       defaultValue: DataTypes.NOW,
     },
   },
   {
     tableName: 'pagos',
+
     timestamps: true,
+
     underscored: true,
 
     hooks: {
+
       beforeValidate: (pago) => {
-        // 🔥 Normalizar monto
+
         const monto = Number(pago.monto);
 
-        if (!Number.isFinite(monto) || monto <= 0) {
+        if (
+          !Number.isFinite(monto) ||
+          monto <= 0
+        ) {
           throw new Error('Monto inválido');
         }
 
-        pago.monto = monto.toFixed(2);
+        pago.monto = Number(
+          monto.toFixed(2)
+        );
       },
     },
 
     indexes: [
-      { fields: ['reserva_id'] },
-      { fields: ['estado'] },
-      { unique: true, fields: ['referencia'] },
+
+      {
+        fields: ['reserva_id'],
+      },
+
+      {
+        fields: ['estado'],
+      },
+
+      {
+        unique: true,
+        fields: ['referencia'],
+      },
     ],
   }
 );
