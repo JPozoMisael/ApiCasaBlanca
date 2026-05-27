@@ -15,6 +15,7 @@ const ServicioReserva = require('./ServicioReserva');
 const Temporada = require('./Temporada');
 const User = require('./User');
 const Valoracion = require('./Valoracion');
+const Configuracion = require('./Configuracion'); // NUEVO MODELO
 
 const models = {
   Hotel,
@@ -32,6 +33,7 @@ const models = {
   Temporada,
   User,
   Valoracion,
+  Configuracion, // NUEVO MODELO
 };
 
 let associationsApplied = false;
@@ -60,6 +62,10 @@ function applyAssociations() {
 
   Hotel.hasMany(User, { foreignKey: 'hotel_id', as: 'usuarios' });
   User.belongsTo(Hotel, { foreignKey: 'hotel_id', as: 'hotel' });
+
+  // ================= CONFIGURACIÓN =================
+  Hotel.hasMany(Configuracion, { foreignKey: 'hotel_id', as: 'configuraciones' });
+  Configuracion.belongsTo(Hotel, { foreignKey: 'hotel_id', as: 'hotel' });
 
   // ================= TIPO HABITACIÓN =================
   TipoHabitacion.hasMany(Habitacion, {

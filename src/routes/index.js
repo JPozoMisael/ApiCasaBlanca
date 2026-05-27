@@ -54,6 +54,17 @@ const reportesRoutes =
 
 
 // ======================================================
+// NUEVAS RUTAS
+// ======================================================
+
+const tarifasRoutes =
+  require('./tarifas.routes');
+
+const configuracionRoutes =
+  require('./configuracion.routes');
+
+
+// ======================================================
 // API INFO
 // ======================================================
 
@@ -88,6 +99,10 @@ router.get('/', (req, res) => {
       services: '/services',
 
       reports: '/reports',
+
+      tarifas: '/tarifas',
+
+      configuracion: '/configuracion',
     },
   });
 });
@@ -160,6 +175,21 @@ router.use(
 router.use(
   '/reports',
   reportesRoutes
+);
+
+
+// ======================================================
+// NUEVAS RUTAS
+// ======================================================
+
+router.use(
+  '/tarifas',
+  tarifasRoutes
+);
+
+router.use(
+  '/configuracion',
+  configuracionRoutes
 );
 
 

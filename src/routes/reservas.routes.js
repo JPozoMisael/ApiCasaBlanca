@@ -17,7 +17,7 @@ const {
 // ======================================================
 
 // =========================================
-// CREAR RESERVA
+// CREAR RESERVA (público)
 // =========================================
 router.post(
   '/',
@@ -68,6 +68,40 @@ router.patch(
   auth,  
   permitirRoles('super_admin', 'admin', 'recepcion'),
   controller.cancelar
+);
+
+// ======================================================
+// NUEVAS RUTAS PARA CHECK-IN / CHECK-OUT
+// ======================================================
+
+// =========================================
+// REALIZAR CHECK-IN
+// =========================================
+router.patch(
+  '/:id/checkin',
+  auth,
+  permitirRoles('super_admin', 'admin', 'recepcion'),
+  controller.realizarCheckIn
+);
+
+// =========================================
+// REALIZAR CHECK-OUT
+// =========================================
+router.patch(
+  '/:id/checkout',
+  auth,
+  permitirRoles('super_admin', 'admin', 'recepcion'),
+  controller.realizarCheckOut
+);
+
+// =========================================
+// ACTUALIZAR ESTADO DE RESERVA
+// =========================================
+router.patch(
+  '/:id/estado',
+  auth,
+  permitirRoles('super_admin', 'admin', 'recepcion'),
+  controller.actualizarEstado
 );
 
 module.exports = router;

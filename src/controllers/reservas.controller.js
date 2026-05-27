@@ -147,10 +147,134 @@ async function cancelar(req, res, next) {
   }
 }
 
+/**
+ * ======================================================
+ * NUEVOS MÉTODOS PARA CHECK-IN / CHECK-OUT
+ * ======================================================
+ */
+
+/**
+ * PATCH /api/v1/reservas/:id/checkin
+ * Realizar check-in de una reserva
+ */
+async function realizarCheckIn(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
+
+    const reserva = await reservasService.realizarCheckIn(id);
+
+    if (!reserva) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Reserva no encontrada',
+      });
+    }
+
+    res.status(200).json({
+      ok: true,
+      message: 'Check-in realizado correctamente',
+      data: reserva,
+    });
+  } catch (error) {
+    console.error('Error realizar check-in:', error.message);
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/v1/reservas/:id/checkout
+ * Realizar check-out de una reserva
+ */
+async function realizarCheckOut(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
+
+    const reserva = await reservasService.realizarCheckOut(id);
+
+    if (!reserva) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Reserva no encontrada',
+      });
+    }
+
+    res.status(200).json({
+      ok: true,
+      message: 'Check-out realizado correctamente',
+      data: reserva,
+    });
+  } catch (error) {
+    console.error('Error realizar check-out:', error.message);
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/v1/reservas/:id/estado
+ * Actualizar solo el estado de una reserva
+ */
+async function actualizarEstado(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID inválido',
+      });
+    }
+
+    const { estado } = req.body;
+    const estadosValidos = ['PENDIENTE', 'CONFIRMADA', 'CHECKIN', 'CHECKOUT', 'CANCELADA'];
+
+    if (!estado || !estadosValidos.includes(estado)) {
+      return res.status(400).json({
+        ok: false,
+        message: `Estado inválido. Estados válidos: ${estadosValidos.join(', ')}`,
+      });
+    }
+
+    const reserva = await reservasService.actualizarEstadoReserva(id, estado);
+
+    if (!reserva) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Reserva no encontrada',
+      });
+    }
+
+    res.status(200).json({
+      ok: true,
+      message: 'Estado actualizado correctamente',
+      data: reserva,
+    });
+  } catch (error) {
+    console.error('Error actualizar estado:', error.message);
+    next(error);
+  }
+}
+
 module.exports = {
   crear,
   listar,
   obtenerPorId,
   actualizar,
   cancelar,
+  realizarCheckIn,
+  realizarCheckOut,
+  actualizarEstado,
 };
