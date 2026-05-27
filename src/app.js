@@ -11,6 +11,9 @@ const errorHandler = require('./middleware/error.middleware');
 
 const { limiterBasico } = require('./middleware/rateLimit.middleware');
 
+const { auth } = require('./middleware/auth.middleware');
+const { permitirRoles } = require('./middleware/roles.middleware');
+
 const { applyAssociations } = require('./models');
 const { sequelize } = require('./config/db');
 
@@ -60,7 +63,8 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Permitir Postman y requests sin origin
+
+    // Permitir Postman y requests server-side
     if (!origin) {
       return callback(null, true);
     }
@@ -70,11 +74,9 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    console.warn(`CORS bloqueado para origin: ${origin}`);
+    console.warn(`CORS bloqueado: ${origin}`);
 
-    return callback(
-      new Error(`CORS no permitido para origin: ${origin}`)
-    );
+    return callback(null, false);
   },
 
   credentials: true,
@@ -108,12 +110,29 @@ app.use(limiterBasico);
 
 /*
 |--------------------------------------------------------------------------
+| DEBUG REQUESTS
+|--------------------------------------------------------------------------
+*/
+
+if ((process.env.NODE_ENV || '').toLowerCase() === 'development') {
+
+  app.use((req, res, next) => {
+
+    console.log(`${req.method} ${req.originalUrl}`);
+
+    next();
+  });
+}
+
+/*
+|--------------------------------------------------------------------------
 | HEALTHCHECK
 |--------------------------------------------------------------------------
 */
 
 app.get('/health', (req, res) => {
-  res.status(200).json({
+
+  return res.status(200).json({
     ok: true,
     service: 'API Casa Blanca',
     version: 'v1',
@@ -129,7 +148,8 @@ app.get('/health', (req, res) => {
 */
 
 app.get('/', (req, res) => {
-  res.status(200).json({
+
+  return res.status(200).json({
     ok: true,
     message: 'API Casa Blanca funcionando',
     endpoints: {
@@ -154,13 +174,14 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
   */
 
   app.get('/test-db', async (req, res) => {
+
     try {
 
       const [result] = await sequelize.query(
         'SELECT 1+1 AS resultado'
       );
 
-      res.status(200).json({
+      return res.status(200).json({
         ok: true,
         message: 'Conexión a base de datos exitosa',
         data: result,
@@ -170,7 +191,7 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
 
       console.error('Error en test-db:', error);
 
-      res.status(500).json({
+      return res.status(500).json({
         ok: false,
         message: error.message,
         details: error.parent
@@ -187,6 +208,7 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
   */
 
   app.get('/test-users', async (req, res) => {
+
     try {
 
       const users = await models.User.findAll({
@@ -200,7 +222,7 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
         ],
       });
 
-      res.status(200).json({
+      return res.status(200).json({
         ok: true,
         total: users.length,
         users,
@@ -210,7 +232,7 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
 
       console.error('Error en test-users:', error);
 
-      res.status(500).json({
+      return res.status(500).json({
         ok: false,
         message: error.message,
         details: error.parent
@@ -222,63 +244,68 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
 
   /*
   |--------------------------------------------------------------------------
-  | UPDATE PASSWORD TEMPORAL
+  | TEST UPDATE PASSWORD
   |--------------------------------------------------------------------------
   */
 
-  app.post('/test-update-password', async (req, res) => {
+  app.post(
+    '/test-update-password',
+    auth,
+    permitirRoles('super_admin'),
+    async (req, res) => {
 
-    try {
+      try {
 
-      const { email, newPassword } = req.body;
+        const { email, newPassword } = req.body;
 
-      if (!email || !newPassword) {
+        if (!email || !newPassword) {
 
-        return res.status(400).json({
-          ok: false,
-          message: 'Email y newPassword son requeridos',
-        });
-      }
-
-      const hashedPassword = await bcrypt.hash(
-        newPassword,
-        10
-      );
-
-      const [updated] = await models.User.update(
-        {
-          password: hashedPassword,
-        },
-        {
-          where: {
-            email,
-          },
+          return res.status(400).json({
+            ok: false,
+            message: 'Email y newPassword son requeridos',
+          });
         }
-      );
 
-      if (!updated) {
+        const hashedPassword = await bcrypt.hash(
+          newPassword,
+          10
+        );
 
-        return res.status(404).json({
+        const [updated] = await models.User.update(
+          {
+            password: hashedPassword,
+          },
+          {
+            where: {
+              email,
+            },
+          }
+        );
+
+        if (!updated) {
+
+          return res.status(404).json({
+            ok: false,
+            message: `Usuario ${email} no encontrado`,
+          });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          message: `Contraseña actualizada para ${email}`,
+        });
+
+      } catch (error) {
+
+        console.error('Error update password:', error);
+
+        return res.status(500).json({
           ok: false,
-          message: `Usuario ${email} no encontrado`,
+          message: error.message,
         });
       }
-
-      return res.status(200).json({
-        ok: true,
-        message: `Contraseña actualizada para ${email}`,
-      });
-
-    } catch (error) {
-
-      console.error('Error update password:', error);
-
-      return res.status(500).json({
-        ok: false,
-        message: error.message,
-      });
     }
-  });
+  );
 }
 
 /*
@@ -290,22 +317,6 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
 const API_PREFIX = '/api/v1';
 
 app.use(API_PREFIX, routes);
-
-/*
-|--------------------------------------------------------------------------
-| DEBUG REQUESTS
-|--------------------------------------------------------------------------
-*/
-
-if ((process.env.NODE_ENV || '').toLowerCase() === 'development') {
-
-  app.use((req, res, next) => {
-
-    console.log(`${req.method} ${req.originalUrl}`);
-
-    next();
-  });
-}
 
 /*
 |--------------------------------------------------------------------------
