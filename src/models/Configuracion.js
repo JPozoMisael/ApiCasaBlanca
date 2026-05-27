@@ -9,27 +9,37 @@ const Configuracion = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+
     hotel_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+
     clave: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      unique: true,
     },
+
     valor: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+
     tipo: {
-      type: DataTypes.ENUM('text', 'number', 'boolean', 'json'),
+      type: DataTypes.ENUM(
+        'text',
+        'number',
+        'boolean',
+        'json'
+      ),
       defaultValue: 'text',
     },
+
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+
     updated_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
@@ -37,8 +47,17 @@ const Configuracion = sequelize.define(
   },
   {
     tableName: 'configuraciones',
+
     timestamps: true,
+
     underscored: true,
+
+    indexes: [
+      {
+        unique: true,
+        fields: ['hotel_id', 'clave'],
+      },
+    ],
   }
 );
 
