@@ -9,17 +9,14 @@ const Reserva = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-
     cliente_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-
     hotel_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-
     codigo_reserva: {
       type: DataTypes.STRING(20),
       allowNull: false,
@@ -29,12 +26,10 @@ const Reserva = sequelize.define(
         len: [4, 20],
       },
     },
-
     fecha_entrada: {
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
-
     fecha_salida: {
       type: DataTypes.DATEONLY,
       allowNull: false,
@@ -43,7 +38,6 @@ const Reserva = sequelize.define(
           if (this.fecha_entrada && value) {
             const entrada = new Date(this.fecha_entrada);
             const salida = new Date(value);
-
             if (salida <= entrada) {
               throw new Error('La fecha de salida debe ser mayor a la fecha de entrada');
             }
@@ -51,7 +45,6 @@ const Reserva = sequelize.define(
         },
       },
     },
-
     num_huespedes: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -59,7 +52,6 @@ const Reserva = sequelize.define(
         min: 1,
       },
     },
-
     estado: {
       type: DataTypes.ENUM(
         'pendiente',
@@ -72,7 +64,6 @@ const Reserva = sequelize.define(
       allowNull: false,
       defaultValue: 'pendiente',
     },
-
     subtotal: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
@@ -81,7 +72,6 @@ const Reserva = sequelize.define(
         min: 0,
       },
     },
-
     impuestos: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
@@ -90,7 +80,6 @@ const Reserva = sequelize.define(
         min: 0,
       },
     },
-
     precio_total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
@@ -99,7 +88,6 @@ const Reserva = sequelize.define(
         min: 0,
       },
     },
-
     observaciones: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -109,12 +97,10 @@ const Reserva = sequelize.define(
     tableName: 'reservas',
     timestamps: true,
     underscored: true,
-
     hooks: {
       beforeSave: (reserva) => {
         const subtotal = Number(reserva.subtotal || 0);
         const impuestos = Number(reserva.impuestos || 0);
-
         reserva.precio_total = (subtotal + impuestos).toFixed(2);
       },
     },

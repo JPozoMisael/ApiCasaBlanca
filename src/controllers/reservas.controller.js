@@ -1,28 +1,15 @@
 const reservasService = require('../services/reservas.service');
 
-/**
- * POST /api/v1/reservas
- */
 async function crear(req, res, next) {
   try {
-    const payload = req.body;
-
-    const resultado = await reservasService.crearReserva(payload);
-
-    res.status(201).json({
-      ok: true,
-      message: 'Reserva creada correctamente',
-      data: resultado,
-    });
+    const resultado = await reservasService.crearReserva(req.body);
+    res.status(201).json({ ok: true, message: 'Reserva creada correctamente', data: resultado });
   } catch (error) {
     console.error('Error crear reserva:', error.message);
     next(error);
   }
 }
 
-/**
- * GET /api/v1/reservas
- */
 async function listar(req, res, next) {
   try {
     const filtros = {
@@ -30,216 +17,107 @@ async function listar(req, res, next) {
       cliente_id: req.query.cliente_id,
       estado: req.query.estado,
     };
-
     const reservas = await reservasService.listarReservas(filtros);
-
-    res.status(200).json({
-      ok: true,
-      data: reservas,
-      meta: {
-        total: reservas.length,
-      },
-    });
+    res.status(200).json({ ok: true, data: reservas, meta: { total: reservas.length } });
   } catch (error) {
     console.error('Error listar reservas:', error.message);
     next(error);
   }
 }
 
-/**
- * GET /api/v1/reservas/:id
- */
 async function obtenerPorId(req, res, next) {
   try {
     const id = Number(req.params.id);
-
     if (isNaN(id)) {
-      return res.status(400).json({
-        ok: false,
-        message: 'ID inválido',
-      });
+      return res.status(400).json({ ok: false, message: 'ID inválido' });
     }
-
     const reserva = await reservasService.obtenerReservaPorId(id);
-
     if (!reserva) {
-      return res.status(404).json({
-        ok: false,
-        message: 'Reserva no encontrada',
-      });
+      return res.status(404).json({ ok: false, message: 'Reserva no encontrada' });
     }
-
-    res.status(200).json({
-      ok: true,
-      data: reserva,
-    });
+    res.status(200).json({ ok: true, data: reserva });
   } catch (error) {
     console.error('Error obtener reserva:', error.message);
     next(error);
   }
 }
 
-/**
- * PUT /api/v1/reservas/:id
- */
 async function actualizar(req, res, next) {
   try {
     const id = Number(req.params.id);
-
     if (isNaN(id)) {
-      return res.status(400).json({
-        ok: false,
-        message: 'ID inválido',
-      });
+      return res.status(400).json({ ok: false, message: 'ID inválido' });
     }
-
     const reserva = await reservasService.actualizarReserva(id, req.body);
-
     if (!reserva) {
-      return res.status(404).json({
-        ok: false,
-        message: 'Reserva no encontrada',
-      });
+      return res.status(404).json({ ok: false, message: 'Reserva no encontrada' });
     }
-
-    res.status(200).json({
-      ok: true,
-      message: 'Reserva actualizada correctamente',
-      data: reserva,
-    });
+    res.status(200).json({ ok: true, message: 'Reserva actualizada correctamente', data: reserva });
   } catch (error) {
     console.error('Error actualizar reserva:', error.message);
     next(error);
   }
 }
 
-/**
- * PATCH /api/v1/reservas/:id/cancelar
- */
 async function cancelar(req, res, next) {
   try {
     const id = Number(req.params.id);
-
     if (isNaN(id)) {
-      return res.status(400).json({
-        ok: false,
-        message: 'ID inválido',
-      });
+      return res.status(400).json({ ok: false, message: 'ID inválido' });
     }
-
     const reserva = await reservasService.cancelarReserva(id);
-
     if (!reserva) {
-      return res.status(404).json({
-        ok: false,
-        message: 'Reserva no encontrada',
-      });
+      return res.status(404).json({ ok: false, message: 'Reserva no encontrada' });
     }
-
-    res.status(200).json({
-      ok: true,
-      message: 'Reserva cancelada correctamente',
-      data: reserva,
-    });
+    res.status(200).json({ ok: true, message: 'Reserva cancelada correctamente', data: reserva });
   } catch (error) {
     console.error('Error cancelar reserva:', error.message);
     next(error);
   }
 }
 
-/**
- * ======================================================
- * NUEVOS MÉTODOS PARA CHECK-IN / CHECK-OUT
- * ======================================================
- */
-
-/**
- * PATCH /api/v1/reservas/:id/checkin
- * Realizar check-in de una reserva
- */
 async function realizarCheckIn(req, res, next) {
   try {
     const id = Number(req.params.id);
-
     if (isNaN(id)) {
-      return res.status(400).json({
-        ok: false,
-        message: 'ID inválido',
-      });
+      return res.status(400).json({ ok: false, message: 'ID inválido' });
     }
-
     const reserva = await reservasService.realizarCheckIn(id);
-
     if (!reserva) {
-      return res.status(404).json({
-        ok: false,
-        message: 'Reserva no encontrada',
-      });
+      return res.status(404).json({ ok: false, message: 'Reserva no encontrada' });
     }
-
-    res.status(200).json({
-      ok: true,
-      message: 'Check-in realizado correctamente',
-      data: reserva,
-    });
+    res.status(200).json({ ok: true, message: 'Check-in realizado correctamente', data: reserva });
   } catch (error) {
     console.error('Error realizar check-in:', error.message);
     next(error);
   }
 }
 
-/**
- * PATCH /api/v1/reservas/:id/checkout
- * Realizar check-out de una reserva
- */
 async function realizarCheckOut(req, res, next) {
   try {
     const id = Number(req.params.id);
-
     if (isNaN(id)) {
-      return res.status(400).json({
-        ok: false,
-        message: 'ID inválido',
-      });
+      return res.status(400).json({ ok: false, message: 'ID inválido' });
     }
-
     const reserva = await reservasService.realizarCheckOut(id);
-
     if (!reserva) {
-      return res.status(404).json({
-        ok: false,
-        message: 'Reserva no encontrada',
-      });
+      return res.status(404).json({ ok: false, message: 'Reserva no encontrada' });
     }
-
-    res.status(200).json({
-      ok: true,
-      message: 'Check-out realizado correctamente',
-      data: reserva,
-    });
+    res.status(200).json({ ok: true, message: 'Check-out realizado correctamente', data: reserva });
   } catch (error) {
     console.error('Error realizar check-out:', error.message);
     next(error);
   }
 }
 
-/**
- * PATCH /api/v1/reservas/:id/estado
- * Actualizar solo el estado de una reserva
- */
 async function actualizarEstado(req, res, next) {
   try {
     const id = Number(req.params.id);
-
     if (isNaN(id)) {
-      return res.status(400).json({
-        ok: false,
-        message: 'ID inválido',
-      });
+      return res.status(400).json({ ok: false, message: 'ID inválido' });
     }
-
     const { estado } = req.body;
-    const estadosValidos = ['PENDIENTE', 'CONFIRMADA', 'CHECKIN', 'CHECKOUT', 'CANCELADA'];
+    const estadosValidos = ['pendiente', 'confirmada', 'check_in', 'check_out', 'cancelada', 'no_show'];
 
     if (!estado || !estadosValidos.includes(estado)) {
       return res.status(400).json({
@@ -249,19 +127,10 @@ async function actualizarEstado(req, res, next) {
     }
 
     const reserva = await reservasService.actualizarEstadoReserva(id, estado);
-
     if (!reserva) {
-      return res.status(404).json({
-        ok: false,
-        message: 'Reserva no encontrada',
-      });
+      return res.status(404).json({ ok: false, message: 'Reserva no encontrada' });
     }
-
-    res.status(200).json({
-      ok: true,
-      message: 'Estado actualizado correctamente',
-      data: reserva,
-    });
+    res.status(200).json({ ok: true, message: 'Estado actualizado correctamente', data: reserva });
   } catch (error) {
     console.error('Error actualizar estado:', error.message);
     next(error);
