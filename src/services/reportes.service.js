@@ -1,4 +1,5 @@
 const { models } = require('../models');
+const { sequelize } = require('../config/db'); // ← línea agregada
 const { Op } = require('sequelize');
 
 // =============================================
@@ -13,13 +14,11 @@ async function getDashboard() {
     models.Pago.count(),
   ]);
 
-  // Reservas por estado
   const reservasPorEstado = await models.Reserva.findAll({
-    attributes: ['estado', [models.sequelize.fn('COUNT', models.sequelize.col('id')), 'total']],
+    attributes: ['estado', [sequelize.fn('COUNT', sequelize.col('id')), 'total']],
     group: ['estado']
   });
 
-  // Ingresos totales (pagos completados)
   const ingresosTotales = await models.Pago.sum('monto', {
     where: { estado: 'aprobado' }
   });
@@ -128,11 +127,13 @@ async function getReservasPorEstado(hotel_id = null) {
 
   const reservasPorEstado = await models.Reserva.findAll({
     where,
-    attributes: ['estado', [models.sequelize.fn('COUNT', models.sequelize.col('id')), 'total']],
+    attributes: ['estado', [sequelize.fn('COUNT', sequelize.col('id')), 'total']],
     group: ['estado']
   });
 
-  const totalReservas = reservasPorEstado.reduce((sum, item) => sum + parseInt(item.dataValues.total), 0);
+  const totalReservas = reservasPorEstado.reduce(
+    (sum, item) => sum + parseInt(item.dataValues.total), 0
+  );
 
   return {
     total_reservas: totalReservas,
@@ -148,7 +149,7 @@ async function getHotelesTop(limit = 10) {
   const hotelesTop = await models.Hotel.findAll({
     attributes: [
       'id', 'nombre', 'ciudad',
-      [models.sequelize.fn('COUNT', models.sequelize.col('reservas.id')), 'total_reservas']
+      [sequelize.fn('COUNT', sequelize.col('reservas.id')), 'total_reservas']
     ],
     include: [
       {
@@ -159,7 +160,7 @@ async function getHotelesTop(limit = 10) {
       }
     ],
     group: ['hoteles.id'],
-    order: [[models.sequelize.literal('total_reservas'), 'DESC']],
+    order: [[sequelize.literal('total_reservas'), 'DESC']],
     limit: parseInt(limit)
   });
 
@@ -173,7 +174,7 @@ async function getServiciosTop(limit = 10) {
   const serviciosTop = await models.Servicio.findAll({
     attributes: [
       'id', 'nombre', 'precio',
-      [models.sequelize.fn('COUNT', models.sequelize.col('reserva_servicios.id')), 'total_contrataciones']
+      [sequelize.fn('COUNT', sequelize.col('reserva_servicios.id')), 'total_contrataciones']
     ],
     include: [
       {
@@ -183,7 +184,7 @@ async function getServiciosTop(limit = 10) {
       }
     ],
     group: ['servicios.id'],
-    order: [[models.sequelize.literal('total_contrataciones'), 'DESC']],
+    order: [[sequelize.literal('total_contrataciones'), 'DESC']],
     limit: parseInt(limit)
   });
 
@@ -197,8 +198,8 @@ async function getClientesFrecuentes(limit = 10) {
   const clientesTop = await models.Cliente.findAll({
     attributes: [
       'id', 'nombres', 'apellidos', 'email',
-      [models.sequelize.fn('COUNT', models.sequelize.col('reservas.id')), 'total_reservas'],
-      [models.sequelize.fn('SUM', models.sequelize.col('reservas.precio_total')), 'total_gastado']
+      [sequelize.fn('COUNT', sequelize.col('reservas.id')), 'total_reservas'],
+      [sequelize.fn('SUM', sequelize.col('reservas.precio_total')), 'total_gastado']
     ],
     include: [
       {
@@ -209,7 +210,7 @@ async function getClientesFrecuentes(limit = 10) {
       }
     ],
     group: ['clientes.id'],
-    order: [[models.sequelize.literal('total_reservas'), 'DESC']],
+    order: [[sequelize.literal('total_reservas'), 'DESC']],
     limit: parseInt(limit)
   });
 
