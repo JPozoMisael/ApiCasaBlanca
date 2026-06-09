@@ -26,7 +26,13 @@ async function habitacionDisponible({ habitacion_id, fecha_entrada, fecha_salida
         model: models.Reserva,
         as: 'reserva',
         where: {
-          estado: { [Op.in]: ['pendiente', 'confirmada', 'completada'] },
+          estado: {
+            [Op.in]: [
+              'pendiente',
+              'confirmada',
+              'check_in'
+            ]
+          },
         },
         required: true,
       },

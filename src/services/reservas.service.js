@@ -87,10 +87,10 @@ async function crearReserva(payload) {
       }
 
       const precioNoche = await obtenerPrecioNoche({
+        hotel_id: habitacion.hotel_id,
         tipo_habitacion_id: habitacion.tipo_habitacion_id,
         fecha: fecha_entrada,
       });
-
       const subtotal = Number((precioNoche * noches).toFixed(2));
       subtotalGeneral += subtotal;
 
@@ -242,9 +242,31 @@ async function realizarCheckIn(id) {
   const reserva = await models.Reserva.findByPk(id);
   if (!reserva) return null;
   if (reserva.estado !== 'confirmada') {
-    throw crearError('Solo se puede hacer check-in en reservas confirmadas', 400);
+    throw crearError(
+      'Solo se puede hacer check-in en reservas confirmadas',
+      400
+    );
   }
-  await reserva.update({ estado: 'check_in' });
+  await reserva.update({
+    estado: 'check_in',
+  });
+  const detalles = await models.DetalleReserva.findAll({
+    where: {
+      reserva_id: reserva.id,
+    },
+  });
+  for (const detalle of detalles) {
+    await models.Habitacion.update(
+      {
+        estado: 'ocupada',
+      },
+      {
+        where: {
+          id: detalle.habitacion_id,
+        },
+      }
+    );
+  }
   return obtenerReservaPorId(id);
 }
 
@@ -252,9 +274,31 @@ async function realizarCheckOut(id) {
   const reserva = await models.Reserva.findByPk(id);
   if (!reserva) return null;
   if (reserva.estado !== 'check_in') {
-    throw crearError('Solo se puede hacer check-out en reservas con check-in realizado', 400);
+    throw crearError(
+      'Solo se puede hacer check-out en reservas con check-in realizado',
+      400
+    );
   }
-  await reserva.update({ estado: 'check_out' });
+  await reserva.update({
+    estado: 'check_out',
+  });
+  const detalles = await models.DetalleReserva.findAll({
+    where: {
+      reserva_id: reserva.id,
+    },
+  })
+  for (const detalle of detalles) {
+    await models.Habitacion.update(
+      {
+        estado: 'limpieza',
+      },
+      {
+        where: {
+          id: detalle.habitacion_id,
+        },
+      }
+    );
+  }
   return obtenerReservaPorId(id);
 }
 
