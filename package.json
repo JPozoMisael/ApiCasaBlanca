@@ -1,12 +1,17 @@
 {
   "name": "api_casablanca",
-  "version": "1.0.0",
-  "description": "",
+  "version": "2.0.0",
+  "description": "API de Salinas Booking: marketplace de alojamiento del cantón Salinas",
   "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "test": "node --test tests/marketplace.test.js tests/seguridad.test.js tests/rbac.test.js tests/canales.test.js tests/operacion.test.js",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "db:seed:demo": "node scripts/seed.js --demo",
+    "db:reset:demo": "node scripts/seed.js --demo --reset",
+    "db:sql": "node scripts/export-rbac-sql.js"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +24,7 @@
     "dotenv": "^17.3.1",
     "express": "^4.22.1",
     "express-rate-limit": "^8.2.1",
+    "fast-xml-parser": "^5.11.1",
     "helmet": "^8.1.0",
     "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.3",
@@ -33,6 +39,7 @@
     "stripe": "^20.1.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "sqlite3": "^6.0.1"
   }
 }

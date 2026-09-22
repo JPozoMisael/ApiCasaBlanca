@@ -1,196 +1,33 @@
 const express = require('express');
+const C = require('../config/constants');
 
 const router = express.Router();
 
-
-// ======================================================
-// AUTH
-// ======================================================
-
-const authRoutes =
-  require('./auth.routes');
-
-const adminRoutes =
-  require('./admin.routes');
-
-
-// ======================================================
-// CORE
-// ======================================================
-
-const hotelesRoutes =
-  require('./hoteles.routes');
-
-const habitacionesRoutes =
-  require('./habitaciones.routes');
-
-const tiposHabitacionRoutes =
-  require('./tipos_habitaciones.routes');
-
-
-// ======================================================
-// BUSINESS
-// ======================================================
-
-const clientesRoutes =
-  require('./clientes.routes');
-
-const reservasRoutes =
-  require('./reservas.routes');
-
-const pagosRoutes =
-  require('./pagos.routes');
-
-
-// ======================================================
-// EXTRA
-// ======================================================
-
-const serviciosRoutes =
-  require('./servicios.routes');
-
-const reportesRoutes =
-  require('./reportes.routes');
-
-
-// ======================================================
-// NUEVAS RUTAS
-// ======================================================
-
-const tarifasRoutes =
-  require('./tarifas.routes');
-
-const configuracionRoutes =
-  require('./configuracion.routes');
-
-
-// ======================================================
-// API INFO
-// ======================================================
-
 router.get('/', (req, res) => {
-
-  return res.status(200).json({
-
+  res.json({
     ok: true,
-
-    message: 'API Casa Blanca v1',
-
-    version: '1.0.0',
-
+    message: `API ${C.APP_NAME} v1`,
+    version: '2.0.0',
     endpoints: {
-
-      auth: '/auth',
-
-      admin: '/admin',
-
-      hotels: '/hotels',
-
-      rooms: '/rooms',
-
-      roomTypes: '/room-types',
-
-      clients: '/clients',
-
-      bookings: '/bookings',
-
-      payments: '/payments',
-
-      services: '/services',
-
-      reports: '/reports',
-
-      tarifas: '/tarifas',
-
-      configuracion: '/configuracion',
+      publico: ['/zonas', '/amenidades', '/search/hoteles', '/hotels/featured', '/hotels/:slug', '/hotels/:slug/availability', '/hotels/:slug/reviews'],
+      reservas: ['/bookings/quote', '/bookings', '/bookings/lookup'],
+      cuenta: ['/auth/login', '/auth/register', '/auth/me', '/reviews', '/favorites'],
+      gestion_hotel: ['/manage/hotel', '/room-types', '/rooms', '/tarifas', '/temporadas', '/services', '/images', '/bloqueos', '/clients', '/payments', '/reports/*', '/admin/usuarios'],
+      plataforma: ['/platform/stats', '/platform/hotels', '/platform/zonas'],
     },
   });
 });
 
+router.use('/auth', require('./auth.routes'));
+router.use('/bookings', require('./reservas.routes'));
+router.use('/platform', require('./plataforma.routes'));
+// Canal SiteMinder: el endpoint SOAP público primero; luego la administración del hotel.
+router.use('/channels', require('./siteminder.routes'));
+router.use('/channels', require('./canales.routes'));
 
-// ======================================================
-// AUTH
-// ======================================================
-
-router.use(
-  '/auth',
-  authRoutes
-);
-
-router.use(
-  '/admin',
-  adminRoutes
-);
-
-
-// ======================================================
-// CORE
-// ======================================================
-
-router.use(
-  '/hotels',
-  hotelesRoutes
-);
-
-router.use(
-  '/rooms',
-  habitacionesRoutes
-);
-
-router.use(
-  '/room-types',
-  tiposHabitacionRoutes
-);
-
-
-// ======================================================
-// BUSINESS
-// ======================================================
-
-router.use(
-  '/clients',
-  clientesRoutes
-);
-
-router.use(
-  '/bookings',
-  reservasRoutes
-);
-
-router.use(
-  '/payments',
-  pagosRoutes
-);
-
-
-// ======================================================
-// EXTRA
-// ======================================================
-
-router.use(
-  '/services',
-  serviciosRoutes
-);
-
-router.use(
-  '/reports',
-  reportesRoutes
-);
-
-
-// ======================================================
-// NUEVAS RUTAS
-// ======================================================
-
-router.use(
-  '/tarifas',
-  tarifasRoutes
-);
-
-router.use(
-  '/configuracion',
-  configuracionRoutes
-);
-
+// Rutas sin prefijo común: cada router declara sus paths completos.
+router.use(require('./publico.routes'));
+router.use(require('./cliente.routes'));
+router.use(require('./gestion.routes'));
 
 module.exports = router;

@@ -55,8 +55,6 @@ const Pago = sequelize.define(
       type: DataTypes.STRING(100),
 
       allowNull: true,
-
-      unique: true,
     },
 
     observaciones: {
@@ -109,10 +107,7 @@ const Pago = sequelize.define(
         fields: ['estado'],
       },
 
-      {
-        unique: true,
-        fields: ['referencia'],
-      },
+      { name: 'idx_pago_referencia', fields: ['referencia'] },
     ],
   }
 );

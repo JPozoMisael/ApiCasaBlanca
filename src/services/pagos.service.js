@@ -1,472 +1,88 @@
-const pagosRepo = require('../repositories/pagos.repo');
-
 const { sequelize } = require('../config/db');
-
 const { models } = require('../models');
+const { AppError } = require('../utils/errors');
+const { redondear } = require('../utils/money');
+const { asegurarInventario } = require('./reservas.service');
 
-/*
-|--------------------------------------------------------------------------
-| LISTAR PAGOS
-|--------------------------------------------------------------------------
-*/
+const INCLUDE_RESERVA = (hotelId) => [
+  {
+    model: models.Reserva,
+    as: 'reserva',
+    attributes: ['id', 'codigo_reserva', 'hotel_id', 'estado', 'precio_total', 'cliente_id'],
+    where: hotelId ? { hotel_id: hotelId } : undefined,
+    required: true,
+    include: [{ model: models.Cliente, as: 'cliente', attributes: ['id', 'nombres', 'apellidos'] }],
+  },
+];
 
-async function listarPagos(filtros = {}) {
+async function listar({ hotelId, reserva_id, estado, metodo, page = 1, limit = 30 }) {
+  const where = {};
+  if (reserva_id) where.reserva_id = reserva_id;
+  if (estado) where.estado = estado;
+  if (metodo) where.metodo = metodo;
 
-  return pagosRepo.listar(filtros);
-}
-
-/*
-|--------------------------------------------------------------------------
-| OBTENER PAGO POR ID
-|--------------------------------------------------------------------------
-*/
-
-async function obtenerPagoPorId(id) {
-
-  return pagosRepo.obtenerPorId(id);
-}
-
-/*
-|--------------------------------------------------------------------------
-| ACTUALIZAR PAGO
-|--------------------------------------------------------------------------
-*/
-
-async function actualizarPago(id, data = {}) {
-
-  const pago = await pagosRepo.obtenerPorId(id);
-
-  if (!pago) {
-    return null;
-  }
-
-  await pago.update(data);
-
-  return pago;
-}
-
-/*
-|--------------------------------------------------------------------------
-| ELIMINAR PAGO
-|--------------------------------------------------------------------------
-*/
-
-async function eliminarPago(id) {
-
-  const pago = await pagosRepo.obtenerPorId(id);
-
-  if (!pago) {
-    return false;
-  }
-
-  await pago.destroy();
-
-  return true;
-}
-
-/*
-|--------------------------------------------------------------------------
-| REGISTRAR PAGO
-|--------------------------------------------------------------------------
-*/
-
-async function registrarPago(data) {
-
-  if (
-    !data?.reserva_id ||
-    data?.monto == null ||
-    !data?.metodo
-  ) {
-    throw crearError(
-      'reserva_id, monto y metodo son obligatorios',
-      400
-    );
-  }
-
-  const monto = Number(data.monto);
-
-  if (!Number.isFinite(monto) || monto <= 0) {
-    throw crearError('monto inválido', 400);
-  }
-
-  const reserva = await models.Reserva.findByPk(
-    data.reserva_id
-  );
-
-  if (!reserva) {
-    throw crearError('Reserva no existe', 404);
-  }
-
-  const pago = await pagosRepo.crear({
-    reserva_id: data.reserva_id,
-    monto,
-    metodo: data.metodo,
-    estado: data.estado || 'pendiente',
-    referencia: data.referencia || null,
-    observaciones: data.observaciones || null,
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.min(100, Math.max(1, Number(limit) || 30));
+  const { rows, count } = await models.Pago.findAndCountAll({
+    where,
+    include: INCLUDE_RESERVA(hotelId),
+    order: [['id', 'DESC']],
+    limit: limitNum,
+    offset: (pageNum - 1) * limitNum,
   });
-
-  return pago;
+  return { data: rows, meta: { total: count, page: pageNum, limit: limitNum, pages: Math.ceil(count / limitNum) } };
 }
 
-/*
-|--------------------------------------------------------------------------
-| REGISTRAR PAGO + CONFIRMAR RESERVA
-|--------------------------------------------------------------------------
-*/
-
-async function registrarPagoYConfirmarReserva({
-  reserva_id,
-  monto,
-  metodo,
-}) {
-
-  if (!reserva_id || monto == null || !metodo) {
-
-    throw crearError(
-      'reserva_id, monto y metodo son obligatorios',
-      400
-    );
-  }
-
-  const montoNum = Number(monto);
-
-  if (
-    !Number.isFinite(montoNum) ||
-    montoNum <= 0
-  ) {
-    throw crearError('monto inválido', 400);
-  }
-
+// Registro manual de un pago (recepción cobra en mostrador, transferencia verificada, etc.).
+async function registrar({ reserva_id, monto, metodo, referencia, observaciones }, hotelId) {
   return sequelize.transaction(async (t) => {
-
-    const reserva = await models.Reserva.findByPk(
-      reserva_id,
-      {
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      }
-    );
-
-    if (!reserva) {
-      throw crearError('Reserva no existe', 404);
+    const reserva = await models.Reserva.findByPk(reserva_id, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!reserva || (hotelId && reserva.hotel_id !== hotelId)) {
+      throw new AppError('Reserva no encontrada', 404, 'RESERVA_NO_ENCONTRADA');
+    }
+    if (['cancelada', 'no_show'].includes(reserva.estado)) {
+      throw new AppError('No se pueden registrar pagos en una reserva cancelada', 409);
     }
 
-    if (
-      montoNum < Number(reserva.precio_total)
-    ) {
-      throw crearError(
-        'Monto insuficiente',
-        400
-      );
+    const pagosPrevios = await models.Pago.findAll({
+      where: { reserva_id, estado: 'aprobado' },
+      attributes: ['monto'],
+      raw: true,
+      transaction: t,
+    });
+    const pagado = pagosPrevios.reduce((s, p) => s + Number(p.monto), 0);
+    const saldo = redondear(Number(reserva.precio_total) - pagado);
+    if (monto > saldo + 0.001) {
+      throw new AppError(`El monto excede el saldo pendiente (${saldo.toFixed(2)})`, 400, 'MONTO_EXCEDE_SALDO');
+    }
+
+    // Una reserva pendiente que recibe dinero debe seguir teniendo sus habitaciones.
+    if (reserva.estado === 'pendiente') {
+      await models.Hotel.findByPk(reserva.hotel_id, { transaction: t, lock: t.LOCK.UPDATE });
+      await asegurarInventario(reserva, t);
     }
 
     const pago = await models.Pago.create(
       {
         reserva_id,
-        monto: montoNum,
+        monto,
         metodo,
+        referencia: referencia || null,
+        observaciones: observaciones || null,
         estado: 'aprobado',
+        fecha_pago: new Date(),
       },
-      {
-        transaction: t,
-      }
+      { transaction: t }
     );
 
-    if (
-      reserva.estado === 'pendiente'
-    ) {
-
-      await reserva.update(
-        {
-          estado: 'confirmada',
-          metodo_pago: metodo,
-        },
-        {
-          transaction: t,
-        }
-      );
+    // Cualquier abono detiene la expiración; con el pago completo la reserva se confirma.
+    if (reserva.estado === 'pendiente') {
+      const completo = redondear(pagado + monto) >= Number(reserva.precio_total);
+      await reserva.update({ expira_en: null, ...(completo ? { estado: 'confirmada' } : {}) }, { transaction: t });
     }
 
-    return {
-      pago,
-      reserva,
-    };
+    return { pago, saldo: redondear(saldo - monto), reserva_estado: reserva.estado };
   });
 }
 
-/*
-|--------------------------------------------------------------------------
-| INICIAR PAGO
-|--------------------------------------------------------------------------
-*/
-
-async function iniciarPago({
-  reserva_id,
-  metodo,
-  usuario_id,
-}) {
-
-  const reserva =
-    await models.Reserva.findByPk(
-      reserva_id
-    );
-
-  if (!reserva) {
-    throw crearError(
-      'Reserva no encontrada',
-      404
-    );
-  }
-
-  return {
-    reserva_id,
-    metodo,
-    monto: reserva.precio_total,
-    estado: 'pendiente',
-    usuario_id,
-  };
-}
-
-/*
-|--------------------------------------------------------------------------
-| CONFIRMAR PAGO
-|--------------------------------------------------------------------------
-*/
-
-async function confirmarPago({
-  pago_id,
-  transaction_id,
-  gateway,
-}) {
-
-  const pago = await models.Pago.findByPk(
-    pago_id
-  );
-
-  if (!pago) {
-    throw crearError(
-      'Pago no encontrado',
-      404
-    );
-  }
-
-  await pago.update({
-    estado: 'aprobado',
-    referencia: transaction_id,
-    observaciones: `Confirmado por ${gateway}`,
-  });
-
-  return pago;
-}
-
-/*
-|--------------------------------------------------------------------------
-| VERIFICAR ESTADO
-|--------------------------------------------------------------------------
-*/
-
-async function verificarEstado(
-  pago_id
-) {
-
-  const pago = await models.Pago.findByPk(
-    pago_id
-  );
-
-  if (!pago) {
-    throw crearError(
-      'Pago no encontrado',
-      404
-    );
-  }
-
-  return {
-    id: pago.id,
-    estado: pago.estado,
-  };
-}
-
-/*
-|--------------------------------------------------------------------------
-| WEBHOOK STRIPE
-|--------------------------------------------------------------------------
-*/
-
-async function procesarWebhookStripe({
-  payload,
-  signature,
-}) {
-
-  return {
-    ok: true,
-    provider: 'stripe',
-  };
-}
-
-/*
-|--------------------------------------------------------------------------
-| WEBHOOK PAYPAL
-|--------------------------------------------------------------------------
-*/
-
-async function procesarWebhookPaypal(
-  payload
-) {
-
-  return {
-    ok: true,
-    provider: 'paypal',
-  };
-}
-
-/*
-|--------------------------------------------------------------------------
-| REEMBOLSAR
-|--------------------------------------------------------------------------
-*/
-
-async function reembolsar({
-  pago_id,
-  monto,
-  motivo,
-  usuario_id,
-}) {
-
-  const pago = await models.Pago.findByPk(
-    pago_id
-  );
-
-  if (!pago) {
-    throw crearError(
-      'Pago no encontrado',
-      404
-    );
-  }
-
-  await pago.update({
-    estado: 'anulado',
-    observaciones: motivo || null,
-  });
-
-  return pago;
-}
-
-/*
-|--------------------------------------------------------------------------
-| MÉTODOS DISPONIBLES
-|--------------------------------------------------------------------------
-*/
-
-async function getMetodosDisponibles() {
-
-  return [
-    {
-      codigo: 'stripe',
-      nombre: 'Stripe',
-      activo: true,
-    },
-
-    {
-      codigo: 'paypal',
-      nombre: 'PayPal',
-      activo: true,
-    },
-
-    {
-      codigo: 'efectivo',
-      nombre: 'Efectivo',
-      activo: true,
-    },
-
-    {
-      codigo: 'transferencia',
-      nombre: 'Transferencia bancaria',
-      activo: true,
-    },
-  ];
-}
-
-/*
-|--------------------------------------------------------------------------
-| HISTORIAL CLIENTE
-|--------------------------------------------------------------------------
-*/
-
-async function getHistorialCliente({
-  cliente_id,
-  page = 1,
-  limit = 10,
-}) {
-
-  return {
-    cliente_id,
-    page,
-    limit,
-    data: [],
-  };
-}
-
-/*
-|--------------------------------------------------------------------------
-| FACTURA PDF
-|--------------------------------------------------------------------------
-*/
-
-async function generarFactura(
-  pago_id
-) {
-
-  return Buffer.from(
-    `Factura ${pago_id}`
-  );
-}
-
-/*
-|--------------------------------------------------------------------------
-| HELPER ERROR
-|--------------------------------------------------------------------------
-*/
-
-function crearError(
-  msg,
-  status = 500
-) {
-
-  const err = new Error(msg);
-
-  err.statusCode = status;
-
-  return err;
-}
-
-/*
-|--------------------------------------------------------------------------
-| EXPORTS
-|--------------------------------------------------------------------------
-*/
-
-module.exports = {
-  listarPagos,
-  obtenerPagoPorId,
-  actualizarPago,
-  eliminarPago,
-
-  registrarPago,
-  registrarPagoYConfirmarReserva,
-
-  iniciarPago,
-  confirmarPago,
-  verificarEstado,
-
-  procesarWebhookStripe,
-  procesarWebhookPaypal,
-
-  reembolsar,
-
-  getMetodosDisponibles,
-
-  getHistorialCliente,
-
-  generarFactura,
-};
+module.exports = { listar, registrar };

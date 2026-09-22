@@ -1,8 +1,0 @@
-const Joi = require('joi');
-
-const loginSchema = Joi.object({
-  email: Joi.string().email().max(100).trim().lowercase().required(),
-  password: Joi.string().min(6).max(100).required(),
-});
-
-module.exports = { loginSchema };

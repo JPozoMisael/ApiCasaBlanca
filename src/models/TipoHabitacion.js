@@ -69,6 +69,19 @@ const TipoHabitacion = sequelize.define(
       defaultValue: false,
     },
 
+    precio_base: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+      validate: { min: 0 },
+    },
+
+    desayuno_incluido: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+
     tiene_balcon: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

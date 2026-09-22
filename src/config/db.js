@@ -1,50 +1,61 @@
 const { Sequelize } = require('sequelize');
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
-  {
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT) || 3306,
-    dialect: process.env.DB_DIALECT || 'mysql',
+const dialect = (process.env.DB_DIALECT || 'mysql').toLowerCase();
+const isDev = (process.env.NODE_ENV || '').toLowerCase() === 'development';
 
-    logging:
-      (process.env.NODE_ENV || '').toLowerCase() === 'development'
-        ? console.log
-        : false,
+const commonDefine = {
+  freezeTableName: true,
+  timestamps: true,
+};
 
-    pool: {
-      max: Number(process.env.DB_POOL_MAX) || 10,
-      min: Number(process.env.DB_POOL_MIN) || 0,
-      acquire: Number(process.env.DB_POOL_ACQUIRE) || 30000,
-      idle: Number(process.env.DB_POOL_IDLE) || 10000,
-    },
+let sequelize;
 
-    timezone: process.env.DB_TIMEZONE || '-05:00',
+if (dialect === 'sqlite') {
+  // Solo para tests y desarrollo local sin MySQL.
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: process.env.DB_STORAGE || ':memory:',
+    logging: false,
+    define: commonDefine,
+  });
+} else {
+  sequelize = new Sequelize(
+    process.env.DB_NAME,
+    process.env.DB_USER,
+    process.env.DB_PASSWORD,
+    {
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT) || 3306,
+      dialect,
 
-    define: {
-      freezeTableName: true,
-      timestamps: true,
-    },
+      logging: isDev ? console.log : false,
 
-    charset: 'utf8mb4',
-    collate: 'utf8mb4_unicode_ci',
+      pool: {
+        max: Number(process.env.DB_POOL_MAX) || 10,
+        min: Number(process.env.DB_POOL_MIN) || 0,
+        acquire: Number(process.env.DB_POOL_ACQUIRE) || 30000,
+        idle: Number(process.env.DB_POOL_IDLE) || 10000,
+      },
 
-    dialectOptions: {
-      dateStrings: true,
-      typeCast: true,
+      timezone: process.env.DB_TIMEZONE || '-05:00',
+      define: commonDefine,
+
       charset: 'utf8mb4',
-    },
-  }
-);
+      collate: 'utf8mb4_unicode_ci',
+
+      dialectOptions: {
+        dateStrings: true,
+        typeCast: true,
+        charset: 'utf8mb4',
+      },
+    }
+  );
+}
 
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log('Conexion a MySQL establecida correctamente');
-    console.log(`Base de datos: ${process.env.DB_NAME}`);
-    console.log(`Host: ${process.env.DB_HOST}:${Number(process.env.DB_PORT) || 3306}`);
+    console.log(`Conexion ${dialect} establecida (${process.env.DB_NAME || 'memoria'})`);
     return true;
   } catch (error) {
     console.error('Error de conexion a la base de datos:', error.message);
@@ -55,7 +66,6 @@ const testConnection = async () => {
 const closeConnection = async () => {
   try {
     await sequelize.close();
-    console.log('Conexion Sequelize cerrada correctamente');
   } catch (error) {
     console.error('Error cerrando Sequelize:', error.message);
   }

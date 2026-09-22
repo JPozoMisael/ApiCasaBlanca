@@ -1,54 +1,32 @@
 const { DataTypes } = require('sequelize');
-
 const { sequelize } = require('../config/db');
 
+// Reseña de un huésped tras su estadía (verificada por reserva en check_out).
 const Valoracion = sequelize.define(
   'Valoracion',
   {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
 
-    // ================= RESERVA =================
-    // TEMPORALMENTE OPCIONAL
-    // Para permitir reviews desde frontend
-    // sin flujo completo de reservas
-    reserva_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
+    reserva_id: { type: DataTypes.INTEGER, allowNull: true },
+    hotel_id: { type: DataTypes.INTEGER, allowNull: false },
+    user_id: { type: DataTypes.INTEGER, allowNull: true },
 
-    // ================= HOTEL =================
-    hotel_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-
-    // ================= PUNTUACION =================
     puntuacion: {
       type: DataTypes.TINYINT,
       allowNull: false,
-
-      validate: {
-        min: 1,
-        max: 10,
-      },
+      validate: { min: 1, max: 10 },
     },
 
-    // ================= COMENTARIO =================
-    comentario: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
+    titulo: { type: DataTypes.STRING(150), allowNull: true },
+    comentario: { type: DataTypes.TEXT, allowNull: true },
+    respuesta_hotel: { type: DataTypes.TEXT, allowNull: true },
 
-    // ================= FECHA =================
-    fecha: {
-      type: DataTypes.DATE,
+    fecha: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+
+    estado: {
+      type: DataTypes.ENUM('publicada', 'oculta'),
       allowNull: false,
-
-      defaultValue: DataTypes.NOW,
+      defaultValue: 'publicada',
     },
   },
   {
@@ -56,20 +34,8 @@ const Valoracion = sequelize.define(
     timestamps: true,
     underscored: true,
     indexes: [
-
-      // REVIEW POR RESERVA
-      {
-        name: 'uq_valoracion_reserva',
-        unique: true,
-        fields: ['reserva_id'],
-      },
-
-      // REVIEWS HOTEL
-      {
-        name: 'idx_valoracion_hotel',
-
-        fields: ['hotel_id'],
-      },
+      { name: 'uq_valoracion_reserva', unique: true, fields: ['reserva_id'] },
+      { name: 'idx_valoracion_hotel', fields: ['hotel_id'] },
     ],
   }
 );

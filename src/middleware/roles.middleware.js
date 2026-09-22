@@ -1,79 +1,36 @@
-function permitirRoles(...rolesPermitidos) {
+const { AppError } = require('../utils/errors');
 
+/*
+| Autorización por PERMISOS (definidos en la base de datos), no por nombre de rol.
+|   permiso('reservas.gestionar')            → requiere ese permiso
+|   permiso('pagos.ver', 'pagos.registrar')  → basta con tener alguno
+|
+| - El alcance "plataforma" tiene acceso total, salvo que las claves `plataforma.*` SOLO las
+|   puede usar un rol de alcance plataforma (aunque a un rol de hotel se le asignara por error).
+| - Un rol desconocido no tiene permisos: se falla cerrado.
+| Debe ir DESPUÉS de auth.
+*/
+function permiso(...claves) {
   return (req, res, next) => {
+    const user = req.user;
+    if (!user) return next(new AppError('No autenticado', 401));
 
-    // =====================================
-    // VALIDAR USUARIO AUTENTICADO
-    // =====================================
+    if (user.alcance === 'plataforma') return next();
 
-    if (!req.user) {
-
-      return res.status(401).json({
-        ok: false,
-        message: 'No autenticado',
-      });
+    const soloPlataforma = claves.every((c) => c.startsWith('plataforma.'));
+    if (soloPlataforma || user.alcance === 'cliente') {
+      return next(new AppError('Acceso denegado: permisos insuficientes', 403, 'PERMISOS_INSUFICIENTES'));
     }
 
-
-    // =====================================
-    // OBTENER ROL
-    // =====================================
-
-    const rolUsuario = String(
-      req.user.rol || ''
-    )
-      .trim()
-      .toLowerCase();
-
-
-    // =====================================
-    // VALIDAR QUE EXISTA ROL
-    // =====================================
-
-    if (!rolUsuario) {
-
-      return res.status(401).json({
-        ok: false,
-        message: 'Rol no definido',
-      });
+    const permitido = claves.filter((c) => !c.startsWith('plataforma.')).some((c) => user.permisos.has(c));
+    if (!permitido) {
+      return next(new AppError('Acceso denegado: permisos insuficientes', 403, 'PERMISOS_INSUFICIENTES'));
     }
-
-
-    // =====================================
-    // NORMALIZAR ROLES PERMITIDOS
-    // =====================================
-
-    const rolesValidos =
-      rolesPermitidos.map((rol) =>
-        String(rol)
-          .trim()
-          .toLowerCase()
-      );
-
-
-    // =====================================
-    // VALIDAR ACCESO
-    // =====================================
-
-    if (!rolesValidos.includes(rolUsuario)) {
-
-      return res.status(403).json({
-        ok: false,
-        message:
-          'Acceso denegado: permisos insuficientes',
-      });
-    }
-
-
-    // =====================================
-    // CONTINUAR
-    // =====================================
-
     next();
   };
 }
 
+const tienePermiso = (user, clave) =>
+  Boolean(user) && (user.alcance === 'plataforma' || (user.alcance !== 'cliente' && user.permisos.has(clave)));
 
-module.exports = {
-  permitirRoles,
-};
+module.exports = { permiso, tienePermiso };

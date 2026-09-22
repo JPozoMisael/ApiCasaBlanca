@@ -1,29 +1,35 @@
 module.exports = (err, req, res, next) => {
-  console.error('Error:', err);
+  // Errores conocidos de Sequelize → respuestas HTTP con sentido.
+  let status = err.statusCode || err.status || 500;
+  let message = err.message;
+  let code = err.code && typeof err.code === 'string' && !err.code.startsWith('ER_') ? err.code : undefined;
 
-  const status = err.statusCode || err.status || 500;
-
-  let message =
-    status >= 500
-      ? 'Error interno del servidor'
-      : err.message || 'Ocurrió un error';
-
-  // Manejo Sequelize
   if (err.name === 'SequelizeValidationError') {
+    status = 422;
     message = err.errors.map((e) => e.message).join(', ');
+  } else if (err.name === 'SequelizeUniqueConstraintError') {
+    status = 409;
+    message = 'Ya existe un registro con esos datos';
+    code = 'DUPLICADO';
+  } else if (err.name === 'SequelizeForeignKeyConstraintError') {
+    status = 409;
+    message = 'El registro está relacionado con otros datos y no se puede modificar o eliminar';
+    code = 'RELACION_EXISTENTE';
+  } else if (err.type === 'entity.parse.failed') {
+    status = 400;
+    message = 'JSON inválido';
   }
 
-  const details =
-    process.env.NODE_ENV === 'development'
-      ? {
-          stack: err.stack,
-          name: err.name,
-        }
-      : undefined;
+  if (status >= 500) {
+    console.error('Error:', err);
+    message = 'Error interno del servidor';
+  }
 
   res.status(status).json({
     ok: false,
-    message,
-    details,
+    message: message || 'Ocurrió un error',
+    code,
+    details: err.details || undefined,
+    stack: process.env.NODE_ENV === 'development' && status >= 500 ? err.stack : undefined,
   });
 };

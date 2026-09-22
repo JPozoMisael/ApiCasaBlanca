@@ -104,13 +104,9 @@ const User = sequelize.define(
     // ROL
     // =====================================
 
+    // Clave de un rol de la tabla `roles` (ya no es un ENUM: se pueden crear roles sin tocar el esquema).
     rol: {
-      type: DataTypes.ENUM(
-        'super_admin',
-        'admin',
-        'recepcion',
-        'cliente'
-      ),
+      type: DataTypes.STRING(30),
 
       allowNull: false,
 

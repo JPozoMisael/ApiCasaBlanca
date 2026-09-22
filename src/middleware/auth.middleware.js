@@ -1,102 +1,52 @@
-const {
-  extraerBearerToken,
-  verificarToken,
-} = require('../utils/tokens');
+const { extraerBearerToken, verificarToken } = require('../utils/tokens');
+const { AppError } = require('../utils/errors');
+const { models } = require('../models');
+const rbac = require('../services/rbac.service');
 
-// =========================================
-// MIDDLEWARE PRINCIPAL
-// =========================================
-function auth(req, res, next) {
+async function cargarUsuario(req) {
+  const token = extraerBearerToken(req.headers.authorization || '');
+  if (!token) return null;
+
+  const payload = verificarToken(token); // lanza 401 si es inválido/expirado
+  if (!payload?.id) throw new AppError('Token inválido', 401);
+
+  // Se relee el usuario: un rol/hotel cambiado o un usuario desactivado surte efecto de inmediato.
+  const user = await models.User.findByPk(payload.id);
+  if (!user || user.estado !== 'activo') throw new AppError('Sesión no válida', 401, 'SESION_INVALIDA');
+
+  const acceso = await rbac.accesoDe(user.rol);
+
+  return {
+    id: user.id,
+    rol: user.rol,
+    alcance: acceso.alcance,
+    permisos: acceso.permisos,
+    hotel_id: user.hotel_id,
+    nombre: user.nombre,
+    email: user.email,
+  };
+}
+
+// Exige sesión.
+async function auth(req, res, next) {
   try {
-    const authHeader = req.headers.authorization || '';
-    const token = extraerBearerToken(authHeader);
-
-    if (!token) {
-      return res.status(401).json({
-        ok: false,
-        message: 'No autorizado: token faltante',
-      });
-    }
-
-    const payload = verificarToken(token);
-
-    if (!payload || !payload.id || !payload.rol) {
-      return res.status(401).json({
-        ok: false,
-        message: 'Token inválido',
-      });
-    }
-
-    req.user = {
-      id: Number(payload.id),
-      rol: String(payload.rol).trim().toLowerCase(),
-    };
-
+    const user = await cargarUsuario(req);
+    if (!user) return next(new AppError('No autorizado: token faltante', 401));
+    req.user = user;
     next();
-  } catch (error) {
-    console.error('Error auth middleware:', error.message);
-    return res.status(401).json({
-      ok: false,
-      message: 'No autorizado: token inválido o expirado',
-    });
+  } catch (err) {
+    next(err);
   }
 }
 
-// =========================================
-// VERIFICAR ROL ESPECÍFICO
-// =========================================
-const verificarRol = (rolesPermitidos = []) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        ok: false,
-        message: 'No autenticado'
-      });
-    }
-
-    if (!rolesPermitidos.includes(req.user.rol)) {
-      return res.status(403).json({
-        ok: false,
-        message: `Acceso denegado. Roles permitidos: ${rolesPermitidos.join(', ')}`
-      });
-    }
-
+// Sesión opcional: rutas públicas que se comportan distinto si hay usuario (p. ej. reservar).
+async function authOpcional(req, res, next) {
+  try {
+    req.user = (await cargarUsuario(req)) || null;
     next();
-  };
-};
-
-// =========================================
-// VERIFICAR ADMIN
-// =========================================
-const verificarAdmin = (req, res, next) => {
-  if (!req.user || (req.user.rol !== 'admin' && req.user.rol !== 'super_admin')) {
-    return res.status(403).json({
-      ok: false,
-      message: 'Acceso denegado. Se requiere rol de administrador'
-    });
+  } catch (err) {
+    next(err);
   }
-  next();
-};
+}
 
-// =========================================
-// VERIFICAR SUPER ADMIN
-// =========================================
-const verificarSuperAdmin = (req, res, next) => {
-  if (!req.user || req.user.rol !== 'super_admin') {
-    return res.status(403).json({
-      ok: false,
-      message: 'Acceso denegado. Se requiere rol de super administrador'
-    });
-  }
-  next();
-};
-
-// =========================================
-// EXPORTS
-// =========================================
-module.exports = {
-  auth,
-  verificarRol,
-  verificarAdmin,
-  verificarSuperAdmin
-};
+module.exports = { auth, authOpcional };
