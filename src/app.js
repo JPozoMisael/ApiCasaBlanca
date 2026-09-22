@@ -27,6 +27,9 @@ app.use(express.json({ limit: process.env.JSON_LIMIT || '1mb' }));
 const allowedOrigins = [
   'http://localhost:8100',
   'http://localhost:4200',
+  // Frontend de producción (sslip.io). Fijo aquí además de FRONTEND_URL para que
+  // funcione aunque la plataforma de despliegue no tenga esa variable configurada.
+  'https://casa-blanca-front-2pcfw4-c449fb-34-66-70-48.sslip.io',
   process.env.FRONTEND_URL,
   process.env.FRONTEND_URL_2,
 ].filter(Boolean);
