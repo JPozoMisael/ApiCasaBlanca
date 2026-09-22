@@ -22,8 +22,26 @@ const startServer = async () => {
     process.exit(1);
   }
 
-  if (!(await testConnection())) {
-    console.error('No se pudo conectar a la base de datos. Revisa el archivo .env (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME).');
+  // Reintenta la conexión: en despliegues orquestados (Docker/Dokploy) el contenedor de la base de
+  // datos puede tardar en aceptar conexiones aunque ya esté "creado" (primer arranque, red que aún
+  // no propaga el DNS interno, etc.). Sin esto, una base de datos que tarda 10 s más en levantar
+  // tumba el backend sin necesidad.
+  const REINTENTOS_DB = Number(process.env.DB_CONNECT_RETRIES ?? 10);
+  const ESPERA_DB_MS = Number(process.env.DB_CONNECT_RETRY_DELAY_MS ?? 5000);
+
+  let conectado = false;
+  for (let intento = 1; intento <= REINTENTOS_DB && !conectado; intento += 1) {
+    conectado = await testConnection();
+    if (!conectado && intento < REINTENTOS_DB) {
+      console.log(`Reintentando conexión a la base de datos en ${ESPERA_DB_MS / 1000}s… (intento ${intento}/${REINTENTOS_DB})`);
+      await new Promise((resolve) => setTimeout(resolve, ESPERA_DB_MS));
+    }
+  }
+  if (!conectado) {
+    console.error(
+      `No se pudo conectar a la base de datos tras ${REINTENTOS_DB} intentos. Revisa DB_HOST, DB_USER, DB_PASSWORD, DB_NAME ` +
+        'y que el servicio de base de datos esté corriendo y en la misma red que este backend.'
+    );
     process.exit(1);
   }
 
